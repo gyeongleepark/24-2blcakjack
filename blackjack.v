@@ -1,0 +1,385 @@
+// module blackjack( 
+//     // Inputs
+//     input reg clk;    
+//     input reg reset;
+//     input reg next;
+//     input reg hit;
+//     input reg stand;
+//     input reg double;  
+//     input reg split;
+//     input reg bet_8;
+//     input reg bet_4;
+//     input reg bet_2;
+//     input reg bet_1;
+
+//     // Outputs
+//     output wire [5:0] player_current_score, player_new_card;
+//     output wire [5:0] player_current_score_split, player_new_card_split;
+//     output wire [5:0] dealer_current_score;
+//     output wire [4:0] current_coin;
+//     output wire can_split;
+//     output wire Win;
+//     output wire Lose;
+//     output wire Draw;
+// );
+
+//     reg hit_before;
+//     reg hit_after = 1'b0;
+//     reg hit_pulse;
+
+//     reg stand_before;
+//     reg stand_after = 1'b0;
+//     reg stand_pulse;
+
+//     reg double_before;
+//     reg double_after = 1'b0;
+//     reg double_pulse;
+
+//     reg next_before;
+//     reg next_after = 1'b0;
+//     reg next_pulse;
+
+//     reg on;
+//     reg [2:0] test = 3'b000;
+//     reg [3:0] card1;
+//     reg [3:0] card2;
+//     reg [3:0] card_value;
+
+//     reg hit_reg;
+//     reg next_reg;
+//     reg rst_reg;
+//     reg stand_reg;
+//     reg double_reg;
+
+//     // card generation - for test
+//     card_generation u_card (
+//         .clk(clk),
+//         .reset(reset),
+//         .on(on), 
+//         .test(test),
+//         .card1_out(card1),
+//         .card2_out(card2)
+//     );
+
+//     debouncer db_next(next, clk, next_reg);
+//     debouncer db_rst(reset, clk, rst_reg);
+//     debouncer db_hit(hit, clk, hit_reg);
+//     debouncer db_stand(stand, clk, stand_reg);
+//     debouncer db_double(double, clk, double_reg);
+
+
+//     //-----------------------------------------
+//     //               FSM
+//     //-----------------------------------------
+
+//     parameter integer C_BIT_WIDTH = 2;
+
+//     parameter [C_BIT_WIDTH-1:0] BETTING_PHASE = 2'b00,
+//                 DEALER_CARD_PHASE   = 2'b01,
+//                 PLAYER_CARD_PHASE   = 2'b10,
+//                 RESULT_PHASE        = 2'b11;
+
+//     reg [C_BIT_WIDTH-1:0] bj_game_state;
+//     reg GAME_FIN;
+//     integer k;
+
+//     always @ (posedge clk) begin
+//         if (reset == 1'b0) begin
+//             bj_game_state      <= BETTING_PHASE;
+//             on <= 1'b1;
+//             k = 0;
+//         end
+//         else begin
+//             case (bj_game_state)
+//                 BETTING_PHASE:
+//                     if (next_pulse) begin
+//                         bj_game_state <= DEALER_CARD_PHASE;
+//                     end
+//                 PLAYER_CARD_PHASE:
+//                     // initial two cards condition
+//                     if (stand_pulse || player_current_score == 21 || dealer_current_score == 21 || player_current_score > 21) 
+//                     begin
+//                         bj_game_state <= DEALER_CARD_PHASE;
+//                         k = k + 1;
+//                     end
+//                     // hit
+//                     else if (hit_pulse) begin
+//                         player_current_score = player_current_score + card_value;
+//                     end
+//                     // double
+//                     else if (double_pulse) begin
+//                         bet_amount = bet_amount + (bet_amount * 2);
+//                         stand_pulse = 1'b1;
+//                         bj_game_state <= DEALER_CARD_PHASE;
+//                     end
+//                     // stand
+//                     else if (stand_pulse) begin
+//                         bj_game_state <= DEALER_CARD_PHASE;
+//                     end
+//                     // bust
+//                     else if (player_current_score + card_value > 21 && k > 0) begin
+//                         bj_game_state <= RESULT_PHASE;
+//                     end
+//                 DEALER_CARD_PHASE:
+//                     if (GAME_FIN) begin
+//                         bj_game_state <= RESULT_PHASE;
+//                     end
+//                     // dealer stand
+//                     else if (dealer_current_score > 17) begin
+//                         bj_game_state <= PLAYER_CARD_PHASE;
+//                     end
+//                     else begin
+//                         bj_game_state <= PLAYER_CARD_PHASE;
+//                     end
+//                 RESULT_PHASE:
+//                     if ((player_current_score < dealer_current_score && dealer_current_score <= 21) 
+//                         || player_current_score > 21) begin
+//                             Win     = 1'b0;
+//                             Lose    = 1'b1;
+//                             Draw    = 1'b0;
+//                     end
+//                     else if ((player_current_score > dealer_current_score && player_current_score <= 21) 
+//                         || dealer_current_score > 21) begin 
+//                             Win     = 1'b1;
+//                             Lose    = 1'b0;
+//                             Draw    = 1'b0;
+//                     end 
+//                     else begin
+//                         Win    = 1'b0;
+//                         Lose    = 1'b0;
+//                         Draw    = 1'b1;
+//                     end 
+//             endcase
+//         end
+//     end
+
+//     //-----------------------------------------
+//     //               Coin
+//     //-----------------------------------------
+
+//     reg bet_amount;
+
+//     always @(posedge clk) begin
+//         if (reset == 1'b0) begin
+//             bet_amount <= 0;
+//         end
+//         else begin
+//             bet_amount <= bet_8*8 + bet_4*4 + bet_2*2 + bet_1*1;
+//         end
+//     end
+
+//     //-----------------------------------------
+//     //               Pulse
+//     //-----------------------------------------
+
+//     always @ (posedge clk) begin
+//         `   // Create reset pulse
+//             reset_before <= reset_reg;
+//             reset_after <= reset_before;
+//             if (reset_before != reset_after && reset_before) begin
+//                 reset_pulse <= 1'b1;
+//             end
+//             else begin
+//                 reset_pulse <= 1'b0;
+//             end
+
+//             // Create hit pulse
+//             hit_before <= hit_reg;
+//             hit_after <= hit_before;
+//             if (hit_before != hit_after && hit_before) begin
+//                 hit_pulse <= 1'b1;
+//             end
+//             else begin
+//                 hit_pulse <= 1'b0;
+//             end
+
+//             // Create Stand pulse
+//             stand_before <= stand_reg;
+//             stand_after <= stand_before;
+//             if (stand_before != stand_after && stand_before) begin
+//                 stand_pulse <= 1'b1;
+//             end
+//             else begin
+//                 stand_pulse <= 1'b0;
+//             end
+
+//             // Create Double pulse
+//             double_before <= double_reg;
+//             double_after <= double_before;
+//             if (double_before != double_after && double_before) begin
+//                 double_pulse <= 1'b1;
+//             end
+//             else begin
+//                 double_pulse <= 1'b0;
+//             end
+
+//             // Create next pulse
+//             next_before <= next_reg;
+//             next_after <= next_before;
+//             if (next_before != next_after && next_before) begin
+//                 next_pulse <= 1'b1;
+//             end
+//             else begin
+//                 next_pulse <= 1'b0;
+//             end
+//     end
+
+//     //-----------------------------------------
+//     //               Score
+//     //-----------------------------------------
+
+//     always @(posedge clk) begin
+//         card_value = card1 + card2;
+//     end
+
+// endmodule
+
+module blackjack(
+    // Inputs
+    input wire clk,    
+    input wire reset,
+    input wire next,
+    input wire hit,
+    input wire stand,
+    input wire double,  
+    input wire split,
+    input wire bet_8,
+    input wire bet_4,
+    input wire bet_2,
+    input wire bet_1,
+
+    // Outputs
+    output wire [5:0] player_current_score, player_new_card,
+    output wire [5:0] player_current_score_split, player_new_card_split,
+    output wire [5:0] dealer_current_score,
+    output wire [4:0] current_coin,
+    output wire can_split,
+    output wire Win,
+    output wire Lose,
+    output wire Draw
+);
+
+    // Internal signals
+    reg [3:0] card1, card2, card_value;
+    reg [3:0] split_card1, split_card2;
+    reg split_active;
+    reg [5:0] bet_amount;
+
+    // Initial coin value
+    reg [4:0] initial_coin = 5'd30;
+
+    // Card generation instance
+    card_generation u_card (
+        .clk(clk),
+        .reset(reset),
+        .on(1'b1),
+        .test(3'b000),
+        .card1_out(card1),
+        .card2_out(card2)
+    );
+
+    //-----------------------------------------
+    //               FSM
+    //-----------------------------------------
+
+    parameter [1:0] BETTING_PHASE = 2'b00, DEALER_CARD_PHASE = 2'b01,
+                    PLAYER_CARD_PHASE = 2'b10, RESULT_PHASE = 2'b11;
+    reg [1:0] bj_game_state;
+
+
+    always @(posedge clk) begin
+        if (reset) begin
+            bj_game_state <= BETTING_PHASE;
+            player_current_score <= 0;
+            player_current_score_split <= 0;
+            dealer_current_score <= 0;
+            split_active <= 1'b0;
+            can_split <= 1'b0;
+            Win <= 1'b0;
+            Lose <= 1'b0;
+            Draw <= 1'b0;
+            current_coin <= initial_coin;
+        end else begin
+            case (bj_game_state)
+                BETTING_PHASE: begin
+                    if (next) begin
+                        player_current_score <= card1 + card2;
+                        can_split <= (card1 == card2);
+                        bj_game_state <= PLAYER_CARD_PHASE;
+                    end
+                end
+
+                PLAYER_CARD_PHASE: begin
+                    // initial state condition 
+                    if (stand || player_current_score == 21 || dealer_current_score == 21) begin
+                        bj_game_state <= DEALER_CARD_PHASE;
+                    end 
+                    else if (split && can_split) begin
+                        split_card1 <= card1;
+                        split_card2 <= card2;
+                        player_current_score <= card1;
+                        player_current_score_split <= card2;
+                        split_active <= 1'b1;
+                        can_split <= 1'b0;
+                    end 
+                    else if (hit) begin
+                        if (!split_active) begin
+                            player_new_card <= card1;
+                            player_current_score <= player_current_score + card1;
+                        end else begin
+                            player_new_card_split <= card2;
+                            player_current_score_split <= player_current_score_split + card2;
+                        end
+                    end 
+                    else if (double) begin
+                        player_new_card <= card1;
+                        player_current_score <= player_current_score + card1;
+                        bj_game_state <= DEALER_CARD_PHASE; // stand
+                        current_coin <= current_coin - bet_amount;
+                    end
+                end
+
+                DEALER_CARD_PHASE: begin
+                    // Dealer logic can be implemented here
+                    bj_game_state <= RESULT_PHASE;
+                end
+
+                RESULT_PHASE: begin
+                    if ((player_current_score > dealer_current_score && player_current_score <= 21) ||
+                        (dealer_current_score > 21)) begin
+                        Win <= 1'b1;
+                        Lose <= 1'b0;
+                        Draw <= 1'b0;
+                        current_coin <= current_coin + 2 * bet_amount;
+                    end else if ((player_current_score < dealer_current_score && dealer_current_score <= 21) ||
+                                 (player_current_score > 21)) begin
+                        Win <= 1'b0;
+                        Lose <= 1'b1;
+                        Draw <= 1'b0;
+                        current_coin <= current_coin - bet_amount;
+                    end else begin
+                        Win <= 1'b0;
+                        Lose <= 1'b0;
+                        Draw <= 1'b1;
+                        current_coin <= current_coin + bet_amount;
+                    end
+                    bj_game_state <= BETTING_PHASE;
+                end
+            endcase
+        end
+    end
+
+    //-----------------------------------------
+    //            bet calculation
+    //-----------------------------------------
+
+    always @(posedge clk or posedge reset) begin
+        if (reset) begin
+            bet_amount <= 0;
+        end else begin
+            bet_amount <= bet_8 * 8 + bet_4 * 4 + bet_2 * 2 + bet_1;
+        end
+    end
+
+endmodule
+

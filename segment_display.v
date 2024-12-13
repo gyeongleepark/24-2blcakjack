@@ -56,13 +56,42 @@ module segment_display(
                Dd = 4'b1011, // "d"
                DA = 4'b1100, // "A"
                DN = 4'b1101; // None 
+
+    wire [5:0] player_current_score, player_new_card, player_current_score_split, player_new_card_split, dealer_current_score;
+    wire [4:0] current_coin;
+    wire can_split, Win, Lose, Draw;
   
                
     ///////////////////////////////////////////////////////////////////////////////////////////
     // TODO: Instantiate your top module top.v here so that it works correctly
-    // top uut (
-    // 
-    // );
+    top uut (
+        .clk(clk),
+        .reset(reset),
+        .next(next),
+        .hit(hit),
+        .stand(stand),
+        .double(double),
+        .split(split),
+        .bet_8(bet_8),
+        .bet_4(bet_4),
+        .bet_2(bet_2),
+        .bet_1(bet_1),
+        .player_current_score(player_current_score),
+        .player_new_card(player_new_card),
+        .player_current_score_split(player_current_score_split),
+        .player_new_card_split(player_new_card_split),
+        .dealer_current_score(dealer_current_score),
+        .current_coin(current_coin),
+        .can_split(can_split),
+        .Win(Win),
+        .Lose(Lose),
+        .Draw(Draw)
+    );
+    
+    assign LED_split_Var = can_split;
+    assign LED_Win_Var = Win;
+    assign LED_Lose_Var = Lose;
+    assign LED_Draw_Var = Draw;
 
     // Activate LEDs (TODO)
     always @(posedge(clk)) begin
