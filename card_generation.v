@@ -1,4 +1,4 @@
-`timescale 1ns / 1ps
+timescale 1ns / 1ps
 
 module card_generation(
 /*
@@ -23,10 +23,12 @@ module card_generation(
         input on, 
         input [2:0] test,
         output [3:0] card1_out,
-        output [3:0] card2_out
+        output [3:0] card2_out,
+        output [3:0] card3_out,
+        output [3:0] card4_out
     );
     
-    reg [3:0] card1, card2;
+    reg [3:0] card1, card2, card3, card4;
     
     reg [47:0] rand1;
     reg [47:0] rand2;
@@ -48,9 +50,13 @@ module card_generation(
             card1 <= 0;
             card2 <= 0;
             counter_simple <= 0;
+            counter1_simple<=0;
             counter_double <= 0;
+            counter1_double<=0;
             counter_blackjack <= 0;
+            counter1_blackjack<=0;
             counter_split <= 0;
+            counter1_split<=0;
             /* 
                This module outputs the LSB 4 bits of the rand1 and rand2 variables as card numbers. 
                Each time a number is output, the rand variables are shifted to the right by one bit. 
@@ -62,7 +68,7 @@ module card_generation(
         else begin
             case (test) 
                 BASE: 
-                        begin
+                        begin                                                                                                
                             if (on) begin
                                 card1 <= rand1[3:0];
                                 card2 <= rand2[3:0];
@@ -77,6 +83,11 @@ module card_generation(
                                 4'b0001: if (on) begin card1 <= 4'd4; card2 <= 4'd0; counter_simple <= 4'd0; end
                                 default: begin card1 <= 4'd0; card2 <= 4'd0; end
                             endcase
+                            case(counter1_simple)
+                                4'b0000: if (on) begin card3 <= 4'd5; card4 <= 4'd7; counter1_simple <= counter1_simple + 4'd1; end
+                                4'b0001: if (on) begin card3 <= 4'd6; card4 <= 4'd0; counter1_simple <= 4'd0; end
+                                default: begin card3 <= 4'd0; card4 <= 4'd0; end
+                            endcase
                         end
                 TEST_DOUBLE: 
                         begin
@@ -85,6 +96,11 @@ module card_generation(
                                 4'b0001: if (on) begin card1 <= 4'd2; card2 <= 4'd0; counter_double <= 4'd0; end
                                 default: begin card1 <= 4'd0; card2 <= 4'd0; end
                             endcase
+                            case(counter1_double)
+                                4'b0000: if (on) begin card3 <= 4'd5; card4 <= 4'd7; counter1_simple <= counter1_simple + 4'd1; end
+                                4'b0001: if (on) begin card3 <= 4'd6; card4 <= 4'd0; counter1_simple <= 4'd0; end
+                                default: begin card3 <= 4'd0; card4 <= 4'd0; end
+                            endcase
                         end
                 TEST_BLACKJACK: 
                         begin
@@ -92,6 +108,11 @@ module card_generation(
                                 4'b0000: if (on) begin card1 <= 4'd10; card2 <= 4'd1; counter_blackjack <= counter_blackjack + 4'd1; end
                                 4'b0001: if (on) begin card1 <= 4'd0; card2 <= 4'd0; counter_blackjack <= 4'd0; end
                                 default: begin card1 <= 4'd0; card2 <= 4'd0; end
+                            endcase
+                            case(counter1_blackjack)
+                                4'b0000: if (on) begin card3 <= 4'd10; card4 <= 4'd1; counter1_simple <= counter1_simple + 4'd1; end
+                                4'b0001: if (on) begin card3 <= 4'd0; card4 <= 4'd0; counter1_simple <= 4'd0; end
+                                default: begin card3 <= 4'd0; card4 <= 4'd0; end
                             endcase
                         end
                 TEST_SPLIT: 
@@ -104,10 +125,20 @@ module card_generation(
                                 4'b0100: if (on) begin card1 <= 4'd2; card2 <= 4'd0; counter_split <= 4'd0; end
                                 default: begin card1 <= 4'd0; card2 <= 4'd0; end
                             endcase
+                            case(counter1_split)
+                                4'b0000: if (on) begin card3 <= 4'd10; card4 <= 4'd9; counter1_split <= counter1_split + 4'd1; end
+                                4'b0001: if (on) begin card3 <= 4'd10; card4 <= 4'd8; counter1_split <= counter1_split + 4'd1; end
+                                4'b0010: if (on) begin card3 <= 4'd4; card4 <= 4'd0; counter1_split <= counter1_split + 4'd1; end
+                                4'b0011: if (on) begin card3 <= 4'd8; card4 <= 4'd0; counter1_split <= counter1_split + 4'd1; end
+                                4'b0100: if (on) begin card3 <= 4'd2; card4 <= 4'd0; counter1_split <= 4'd0; end
+                                default: begin card3 <= 4'd0; card4 <= 4'd0; end
+                            endcase
                         end
                 default: begin
                                 card1 <= 0;
                                 card2 <= 0;
+                                card3 <= 0;
+                                card4 <= 0;
                           end
             endcase
         end
@@ -116,5 +147,7 @@ module card_generation(
     // The output range is set from 0 to 10, where 0 indicates no card was generated. Ace (A) is mapped to 1.
     assign card1_out = (card1 > 4'd10) ? 4'd10 : card1;
     assign card2_out = (card2 > 4'd10) ? 4'd10 : card2;
+    assign card3_out = (card3 > 4'd10) ? 4'd10 : card3;
+    assign card4_out = (card4 > 4'd10) ? 4'd10 : card4;
     
 endmodule
