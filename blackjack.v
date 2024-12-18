@@ -263,6 +263,10 @@ module blackjack(
 
     // Internal signals
     wire [3:0] card1, card2, card_value;
+
+    reg [5:0] player_hand [1:4];
+    reg [5:0] dealer_hand [1:4];
+
     reg [3:0] split_card1, split_card2;
     reg split_active;
     reg [5:0] bet_amount;
@@ -278,6 +282,7 @@ module blackjack(
     reg draw_reg;
 
     reg split_pulse;
+    reg first_turn;
 
     integer player_score;
     integer dealer_score;
@@ -287,7 +292,7 @@ module blackjack(
         .clk(clk),
         .reset(reset),
         .on(1'b1),
-        .test(3'b000),
+        .test(3'b001),
         .card1_out(card1),
         .card2_out(card2)
     );
@@ -302,7 +307,9 @@ module blackjack(
                     RESULT_PHASE = 2'b11;
     reg [1:0] bj_game_state;
 
-    always @(posedge clk or posedge reset) begin
+    integer i;
+
+    always @(posedge clk) begin
         if (reset) begin
             bj_game_state <= BETTING_PHASE;
             player_score = 0;
@@ -315,13 +322,17 @@ module blackjack(
             lose_reg <= 0;
             draw_reg <= 0;
             split_pulse <= 0;
+            split_active <= 0;
+            first_turn <= 1;
+            i = 2;
         end else begin
             case (bj_game_state)
                 BETTING_PHASE: begin
-                    if (next) begin
-                        player_score <= card1 + card2;
-                        split_pulse <= (card1 == card2);
-                        bj_game_state <= PLAYER_CARD_PHASE;
+                    player_hand[1] <= card1;
+                    player_hand[2] <= card2;
+                    player_score <= player_hand[1] + player_hand[2];
+                    if (bet_amount > 0 & next) begin
+                        bj_game_state <= DEALER_CARD_PHASE;
                     end
                 end
 
@@ -339,8 +350,15 @@ module blackjack(
                     end 
                     else if (hit) begin
                         if (!split_active) begin
-                            player_new_card_reg <= card1;
-                            player_score <= player_score + card1;
+                            always @(*) begin
+                                player_new_card_reg <= card1;
+                                player_score <= player_score + player_new_card_reg;
+                                if (player_score >= 21) begin
+                                    bj_game_state <= RESULT_PHASE;
+                                end else begin
+                                    bj_game_state <= PLAYER_CARD_PHASE;
+                                end
+                            end
                         end else begin
                             player_new_card_split_reg <= card2;
                             player_current_score_split_reg <= player_current_score_split_reg + card2;
@@ -354,9 +372,18 @@ module blackjack(
                 end
 
                 DEALER_CARD_PHASE: begin
-                    if (dealer_score < 17) begin
-                        dealer_score <= dealer_score + card2;
-                    end else begin
+                    if (first_turn) begin
+                        // reveal one of the cards
+                        if (next) begin
+                            bj_game_state <= PLAYER_CARD_PHASE;
+                            first_turn = 1'b0;
+                        end
+                    end 
+                    else if (!first_turn && dealer_score < 17) begin
+                        dealer_score <= dealer_score + card1;
+                        bj_game_state <= PLAYER_CARD_PHASE;
+                    end
+                    else begin
                         bj_game_state <= RESULT_PHASE;
                     end
                 end
@@ -380,6 +407,9 @@ module blackjack(
                         draw_reg <= 1'b1;
                     end
                     split_active <= 0;
+                    if (next) begin
+                        bj_game_state <= BETTING_PHASE;
+                    end
                 end
             endcase
         end
