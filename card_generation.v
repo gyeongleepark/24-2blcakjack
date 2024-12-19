@@ -1,4 +1,4 @@
-timescale 1ns / 1ps
+`timescale 1ns / 1ps
 
 module card_generation(
 /*
@@ -43,16 +43,18 @@ module card_generation(
     reg [3:0] counter_simple,
               counter_double,
               counter_blackjack,
-              counter_split;
+              counter_split,counter1_simple,counter1_double,counter1_blackjack,counter1_split;
     
     always @(posedge clk or posedge reset) begin
         if (reset) begin
             card1 <= 0;
             card2 <= 0;
-            counter_simple <= 0;
-            counter1_simple<=0;
+            card3 <= 0;
+            card4 <= 0;
+            counter_simple <=4'd0;
+            counter1_simple<=4'd0;
             counter_double <= 0;
-            counter1_double<=0;
+            counter1_double <= 0;
             counter_blackjack <= 0;
             counter1_blackjack<=0;
             counter_split <= 0;
@@ -78,60 +80,39 @@ module card_generation(
                         end
                 TEST_SIMPLE: 
                         begin
-                            case (counter_simple)
-                                4'b0000: if (on) begin card1 <= 4'd10; card2 <= 4'd8; counter_simple <= counter_simple + 4'd1; end
-                                4'b0001: if (on) begin card1 <= 4'd4; card2 <= 4'd0; counter_simple <= 4'd0; end
-                                default: begin card1 <= 4'd0; card2 <= 4'd0; end
-                            endcase
-                            case(counter1_simple)
-                                4'b0000: if (on) begin card3 <= 4'd5; card4 <= 4'd7; counter1_simple <= counter1_simple + 4'd1; end
-                                4'b0001: if (on) begin card3 <= 4'd6; card4 <= 4'd0; counter1_simple <= 4'd0; end
-                                default: begin card3 <= 4'd0; card4 <= 4'd0; end
+                            case ({counter_simple,counter1_simple})
+                                8'b00000000: if (on) begin card1 <= 4'd10; card2 <= 4'd8; card3 <= 4'd4; card4 <= 4'd8; counter_simple <= counter_simple + 4'd1; counter1_simple <= counter1_simple + 4'd1; end
+                                8'b00010001: if (on) begin card1 <= 4'd4; card2 <= 4'd0; card3 <= 4'd0; card4 <= 4'd0;
+                                counter_simple <= 4'd0; counter1_simple <= 4'd0; end
+                                default: begin card1 <= 4'd0; card2 <= 4'd0; card3 <= 4'd0; card4 <= 4'd0; counter_simple <= 4'd0; counter1_simple <= 4'd0; end
                             endcase
                         end
                 TEST_DOUBLE: 
                         begin
-                            case (counter_double)
-                                4'b0000: if (on) begin card1 <= 4'd10; card2 <= 4'd8; counter_double <= counter_double + 4'd1; end
-                                4'b0001: if (on) begin card1 <= 4'd2; card2 <= 4'd0; counter_double <= 4'd0; end
+                            case ({counter_double,counter1_double})
+                                8'b00000000: if (on) begin card1 <= 4'd10; card2 <= 4'd8; card3 <= 4'd5; card4 <= 4'd7; counter_double <= counter_double + 4'd1; counter1_simple <= counter1_simple + 4'd1; end
+                                8'b00010001: if (on) begin card1 <= 4'd2; card2 <= 4'd0; card3 <= 4'd6; card4 <= 4'd0; 
+                                counter_double <= 4'd0; counter1_double <= 4'd0; end
                                 default: begin card1 <= 4'd0; card2 <= 4'd0; end
-                            endcase
-                            case(counter1_double)
-                                4'b0000: if (on) begin card3 <= 4'd5; card4 <= 4'd7; counter1_simple <= counter1_simple + 4'd1; end
-                                4'b0001: if (on) begin card3 <= 4'd6; card4 <= 4'd0; counter1_simple <= 4'd0; end
-                                default: begin card3 <= 4'd0; card4 <= 4'd0; end
-                            endcase
+                            endcase                                
                         end
                 TEST_BLACKJACK: 
                         begin
-                            case (counter_blackjack)
-                                4'b0000: if (on) begin card1 <= 4'd10; card2 <= 4'd1; counter_blackjack <= counter_blackjack + 4'd1; end
-                                4'b0001: if (on) begin card1 <= 4'd0; card2 <= 4'd0; counter_blackjack <= 4'd0; end
-                                default: begin card1 <= 4'd0; card2 <= 4'd0; end
-                            endcase
-                            case(counter1_blackjack)
-                                4'b0000: if (on) begin card3 <= 4'd10; card4 <= 4'd1; counter1_simple <= counter1_simple + 4'd1; end
-                                4'b0001: if (on) begin card3 <= 4'd0; card4 <= 4'd0; counter1_simple <= 4'd0; end
-                                default: begin card3 <= 4'd0; card4 <= 4'd0; end
+                            case ({counter_blackjack,counter1_blackjack})
+                                8'b00000000: if (on) begin card1 <= 4'd10; card2 <= 4'd1; card3 <= 4'd10; card4 <= 4'd1; counter_blackjack <= counter_blackjack + 4'd1; counter1_simple <= counter1_simple + 4'd1; end
+                                4'b0001: if (on) begin card1 <= 4'd0; card2 <= 4'd0; card3 <= 4'd0; card4 <= 4'd0; counter_blackjack <= 4'd0; counter1_simple <= 4'd0; end
+                                default: begin card1 <= 4'd0; card2 <= 4'd0; card3 <= 4'd0; card4 <= 4'd0; end
                             endcase
                         end
                 TEST_SPLIT: 
                         begin
-                            case (counter_split)
-                                4'b0000: if (on) begin card1 <= 4'd10; card2 <= 4'd10; counter_split <= counter_split + 4'd1; end
-                                4'b0001: if (on) begin card1 <= 4'd8; card2 <= 4'd0; counter_split <= counter_split + 4'd1; end
-                                4'b0010: if (on) begin card1 <= 4'd4; card2 <= 4'd0; counter_split <= counter_split + 4'd1; end
-                                4'b0011: if (on) begin card1 <= 4'd8; card2 <= 4'd0; counter_split <= counter_split + 4'd1; end
-                                4'b0100: if (on) begin card1 <= 4'd2; card2 <= 4'd0; counter_split <= 4'd0; end
-                                default: begin card1 <= 4'd0; card2 <= 4'd0; end
-                            endcase
-                            case(counter1_split)
-                                4'b0000: if (on) begin card3 <= 4'd10; card4 <= 4'd9; counter1_split <= counter1_split + 4'd1; end
-                                4'b0001: if (on) begin card3 <= 4'd10; card4 <= 4'd8; counter1_split <= counter1_split + 4'd1; end
-                                4'b0010: if (on) begin card3 <= 4'd4; card4 <= 4'd0; counter1_split <= counter1_split + 4'd1; end
-                                4'b0011: if (on) begin card3 <= 4'd8; card4 <= 4'd0; counter1_split <= counter1_split + 4'd1; end
-                                4'b0100: if (on) begin card3 <= 4'd2; card4 <= 4'd0; counter1_split <= 4'd0; end
-                                default: begin card3 <= 4'd0; card4 <= 4'd0; end
+                            case ({counter_split, counter1_split})
+                                8'b00000000: if (on) begin card1 <= 4'd10; card2 <= 4'd10; card3 <= 4'd10; card4 <= 4'd9; counter_split <= counter_split + 4'd1; counter1_split <= counter1_split + 4'd1; end
+                                8'b00010001: if (on) begin card1 <= 4'd8; card2 <= 4'd0; counter_split <= counter_split + 4'd1; end
+                                8'b00100001: if (on) begin card1 <= 4'd4; card2 <= 4'd0; counter_split <= counter_split + 4'd1; end
+                                8'b00110001: if (on) begin card1 <= 4'd8; card2 <= 4'd0; counter_split <= counter_split + 4'd1; end
+                                8'b01000001: if (on) begin card1 <= 4'd2; card2 <= 4'd0; counter_split <= 4'd0; counter1_split <= 4'b0; end
+                                default: begin card1 <= 4'd0; card2 <= 4'd0; card3 <= 4'd0; card4 <= 4'd0; end
                             endcase
                         end
                 default: begin
