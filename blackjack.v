@@ -59,6 +59,49 @@ module blackjack(
     reg [5:0] split_score;  // 추가
     // player_score가 int라서 이전 state를 불러올 수 없는듯
 
+    function [7:0] calculate_score_with_ace;
+        input [5:0] card1, card2, card3, card4;  // 최대 4개의 카드 입력
+        input [3:0] card_count;   // 카드 개수
+        integer i;                // Loop index
+        reg [7:0] score;          // 점수 계산용
+        reg [3:0] ace_count;      // Ace 개수 추적
+        reg [5:0] cards [1:4];                  // 지역 배열
+
+        begin
+            score = 0;
+            ace_count = 0;
+
+            // 배열 초기화
+            cards[1] = card1;
+            cards[2] = card2;
+            cards[3] = card3;
+            cards[4] = card4;
+
+            // 모든 카드 순회
+            for (i = 1; i <= card_count; i = i + 1) begin
+                if (cards[i] == 6'd1) begin
+                    ace_count = ace_count + 1;   // Ace 발견 시 개수 증가
+                end
+                score = score + cards[i];         // 기본 점수 계산
+            end
+
+            // Ace를 11로 계산할 수 있는 경우 처리
+            if (ace_count > 0) begin
+                // 한 개의 Ace를 11로 계산하고 나머지는 1로 계산
+                if ((score + 10) <= 21) begin
+                    score = score + 10;  // 첫 번째 Ace는 11로 계산
+                    ace_count = ace_count - 1;
+                end
+
+                // 추가 Ace는 모두 1로 계산
+                score = score + ace_count;  // 남은 Ace는 1씩 추가
+            end
+
+            calculate_score_with_ace = score;
+        end
+    endfunction    
+
+
     // Card generation instance
     card_generation u_card (
         .clk(clk),
@@ -104,20 +147,36 @@ module blackjack(
             split_can <= 0;
             first_turn <= 1;
             blackjack_win <= 0;
+
+            player_hand[1] <= 6'd0;
+            player_hand[2] <= 6'd0;
+            player_hand[3] <= 6'd0;
+            player_hand[4] <= 6'd0;
+
+            dealer_hand[1] <= 6'd0;
+            dealer_hand[2] <= 6'd0;
+            dealer_hand[3] <= 6'd0;
+            dealer_hand[4] <= 6'd0;
+
+            split_hand[1] <= 6'd0;
+            split_hand[2] <= 6'd0;
+            split_hand[3] <= 6'd0;
+            split_hand[4] <= 6'd0;
+
         end else begin
             case (bj_game_state)
                 BETTING_PHASE: begin
                     current_coin_reg <= initial_coin;
                     player_hand[1] <= card1;
                     player_hand[2] <= card2;
-                    player_card_count <= 4'd2;    // 이거 추가함
-                    player_score <= player_hand[1] + player_hand[2];
                     dealer_hand[1] <= card3;
                     dealer_hand[2] <= card4;
+                    player_card_count <= 4'd2;    // 이거 추가함
+                    player_score <= calculate_score_with_ace(player_hand[1], player_hand[2], player_hand[3], player_hand[4], player_card_count);   // 이거 함수로 바꿈
                     dealer_card_count <= 4'd2;    // 이것도
                     dealer_score <= dealer_hand[1] + dealer_hand[2];
                     
-                    if (player_hand[1] == 6'd1) begin
+                    /*if (player_hand[1] == 6'd1) begin
                         player_score <= player_hand[1] + player_hand[2] + 10;
                     end else if (player_hand[2] == 6'd1) begin
                         player_score <= player_hand[1] + player_hand[2] + 10;
@@ -125,7 +184,7 @@ module blackjack(
 
                     if (bet_amount > 0 & next) begin
                         bj_game_state <= DEALER_CARD_PHASE;
-                    end
+                    end*/
                 end
 
                 PLAYER_CARD_PHASE: begin
@@ -142,8 +201,8 @@ module blackjack(
                                 split_hand[1] <= player_hand[2];
                                 player_card_count <= 1;
                                 split_card_count <= 1;
-                                player_score <= player_hand[1];
-                                split_score <= split_hand[1];
+                                player_score <= calculate_score_with_ace(player_hand[1], player_hand[2], player_hand[3], player_hand[4], player_card_count);
+                                split_score <= calculate_score_with_ace(split_hand[1], split_hand[2], split_hand[3], split_hand[4], split_card_count);
                                 split_active <= 0;
                                 split_complete <= 1;
                             end 
@@ -157,7 +216,7 @@ module blackjack(
                                         player_card_count <= 4'd4;
                                     end
                                     player_hand[player_card_count] <= card1;
-                                    player_score <= player_score + card1;
+                                    player_score <= calculate_score_with_ace(player_hand[1], player_hand[2], player_hand[3], player_hand[4], player_card_count);
                                     bj_game_state <= PLAYER_CARD_PHASE;
                                 end else begin
                                     player_new_card_split_reg <= card2;
@@ -171,7 +230,7 @@ module blackjack(
                                     player_new_card_reg <= card1;
                                     player_card_count <= player_card_count + 1;    // ace 계산 추가해야함
                                     player_hand[player_card_count] <= player_new_card_reg;
-                                    player_score <= player_score + player_new_card_reg;
+                                    player_score <= calculate_score_with_ace(player_hand[1], player_hand[2], player_hand[3], player_hand[4], player_card_count);
                                     bj_game_state <= DEALER_CARD_PHASE;
                                 end else begin
                                     
