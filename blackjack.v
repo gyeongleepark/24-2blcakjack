@@ -19,6 +19,8 @@ module blackjack(
     output [5:0] player_new_card_split,
     output [5:0] dealer_current_score,
     output [4:0] current_coin,
+    // output [5:0] player_hand[1:4],
+    // output [5:0] dealer_hand[1:4],
     output can_split,
     output Win,
     output Lose,
@@ -68,22 +70,19 @@ module blackjack(
         .card2_out(card2)
     );
 
-    // assign newcard_pulse = (!newcard_ff2) && newcard_ff;
     //-----------------------------------------
     //       Card generation pulse
     //-----------------------------------------
-    assign newcard_pulse = trigger_newcard && !newcard_ff2;
+    assign newcard_pulse = !newcard_ff2 && trigger_newcard;
 
     always @(posedge clk or posedge reset) begin
         if (reset) begin
             newcard_ff <= 1'b0;
             newcard_ff2 <= 1'b0;
-            trigger_newcard <= 1'b0;  // Reset trigger
         end else begin
             // Update flip-flops for pulse generation
             newcard_ff <= trigger_newcard;
             newcard_ff2 <= newcard_ff;
-            // Automatically clear the trigger after generating a pulse
             if (newcard_pulse) begin
                 trigger_newcard <= 0;  // Turn off trigger
             end
@@ -110,6 +109,7 @@ module blackjack(
             current_coin_reg <= 0;
             player_current_score_split_reg <= 0;
             player_new_card_reg <= 0;
+            dealer_new_card_reg <= 0;
             player_new_card_split_reg <= 0;
             win_reg <= 0;
             lose_reg <= 0;
@@ -119,7 +119,8 @@ module blackjack(
             first_turn <= 1;
             blackjack_win <= 0;
             trigger_newcard <= 0;
-            i = 2;
+            i = 3;
+            j = 3;
         end else begin
             case (bj_game_state)
                 BETTING_PHASE: begin
@@ -130,7 +131,6 @@ module blackjack(
                         player_hand[1] <= card1;
                         player_hand[2] <= card2;
                         player_score <= player_hand[1] + player_hand[2];
-
                         // Handle player ace of the first two cards
                         if (player_hand[1] == 6'd1) begin
                             player_score <= player_hand[1] + player_hand[2] + 10;
@@ -140,7 +140,6 @@ module blackjack(
                     end else begin
                         trigger_newcard <= 0;  // Deassert after one pulse
                     end
-                    
                     // move on to dealer phase
                     if (bet_amount > 0 && next) begin
                         bj_game_state <= DEALER_CARD_PHASE;
@@ -149,7 +148,7 @@ module blackjack(
 
                 PLAYER_CARD_PHASE: begin
                     // player bust
-                    if (player_score == 21 || dealer_score == 21) begin
+                    if (player_score >= 21 || dealer_score == 21) begin
                         bj_game_state <= RESULT_PHASE;
                     end 
                     else begin
@@ -167,9 +166,16 @@ module blackjack(
                             // hit
                             else if (hit) begin
                                 if (!split_active) begin
-                                    trigger_newcard <= 1;
-                                    player_new_card_reg <= card1;
-                                    player_score <= player_score + player_new_card_reg;
+                                    if (!newcard_pulse) begin
+                                        trigger_newcard <= 1;
+                                        player_hand[i] <= card1;
+                                        player_new_card_reg <= card1;
+                                    end else begin
+                                        trigger_newcard <= 0;  // Deassert after one pulse
+                                        // $display("player_score before: %d", player_score);
+                                        player_score <= player_score + player_new_card_reg;
+                                        // $display("player_score after: %d", player_score);
+                                    end
                                     bj_game_state <= PLAYER_CARD_PHASE;
                                 end else begin
                                     trigger_newcard <= 1;
@@ -179,15 +185,17 @@ module blackjack(
                             end 
                             // double
                             else if (double) begin
-                                trigger_newcard <= 1;
-                                player_new_card_reg <= card1;
-                                player_hand[i+1] <= player_new_card_reg;
-                                player_score <= player_score + player_new_card_reg;
-                                if (next) begin
-                                    // automatically stand after double
-                                    i <= i + 1;
-                                    bj_game_state <= PLAYER_CARD_PHASE;
+                                if (!newcard_pulse) begin
+                                    trigger_newcard <= 1;
+                                    player_hand[i] <= card1;
+                                    player_new_card_reg <= card1;
+                                end else begin
+                                    trigger_newcard <= 0;  // Deassert after one pulse
+                                    // $display("player_score before: %d", player_score);
+                                    player_score <= player_score + player_new_card_reg;
+                                    // $display("player_score after: %d", player_score);
                                 end
+                                bj_game_state <= DEALER_CARD_PHASE;
                             end
                         end else begin
                             // if not bust, go to the dealer phase 
@@ -199,10 +207,16 @@ module blackjack(
                 DEALER_CARD_PHASE: begin
                     if (first_turn) begin
                         // hand over two cards to the dealer
-                        trigger_newcard <= 1;
-                        dealer_hand[1] <= card1;
-                        dealer_hand[2] <= card2;
-                        dealer_score <= dealer_hand[1] + dealer_hand[2];
+                        if (!newcard_pulse) begin
+                            trigger_newcard <= 1;
+                            dealer_hand[1] <= card1;
+                            dealer_hand[2] <= card2;
+                        end else begin
+                            trigger_newcard <= 0;  // Deassert after one pulse
+                            // $display("dealer_score before: %d", dealer_score);
+                            dealer_score <= dealer_hand[1] + dealer_hand[2];
+                            // $display("dealer_score after: %d", dealer_score);
+                        end
                         // reveal one of the cards
                         if (next) begin
                             bj_game_state <= PLAYER_CARD_PHASE;
@@ -211,11 +225,16 @@ module blackjack(
                     end 
                     // after player stands
                     else if (!first_turn && dealer_score < 17) begin
-                        trigger_newcard <= 1;
-                        dealer_new_card_reg <= card1;
-                        dealer_hand[i+1] <= dealer_new_card_reg;
-                        dealer_score <= dealer_score + dealer_new_card_reg;
+                        if (!newcard_pulse) begin
+                            trigger_newcard <= 1;
+                            dealer_new_card_reg <= card1;   
+                            dealer_hand[j] <= dealer_new_card_reg;  
+                        end else begin
+                            trigger_newcard <= 0;
+                            dealer_score <= dealer_score + dealer_new_card_reg; 
+                        end
                         bj_game_state <= DEALER_CARD_PHASE;
+                        j <= j + 1;
                     end
                     else begin
                         bj_game_state <= RESULT_PHASE;
@@ -238,7 +257,7 @@ module blackjack(
                         win_reg  <= 1'b1;
                         lose_reg <= 1'b0;
                         draw_reg <= 1'b0;
-                        $display("you win");
+                        $display("you win!");
                     end 
                     else begin
                         win_reg  <= 1'b0;
@@ -275,6 +294,7 @@ module blackjack(
         if (reset) begin
             current_coin_reg <= initial_coin;
         end else begin
+            current_coin_reg <= initial_coin;
             if (bj_game_state == BETTING_PHASE) begin
                 bet_amount <= (bet_8 << 3) | (bet_4 << 2) | (bet_2 << 1) | bet_1;
                 current_coin_reg <= current_coin_reg - bet_amount;

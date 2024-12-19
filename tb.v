@@ -28,6 +28,8 @@ module tb;
     wire [5:0] player_current_score_split, player_new_card_split;
     wire [5:0] dealer_current_score;
     wire [4:0] current_coin;
+    wire [5:0] player_hand[1:4];
+    wire [5:0] dealer_hand[1:4];
     wire can_split;
     wire Win;
     wire Lose;
@@ -52,6 +54,8 @@ module tb;
         .player_new_card_split(player_new_card_split),
         .dealer_current_score(dealer_current_score),
         .current_coin(current_coin),
+        // .player_hand(player_hand),
+        // .dealer_hand(dealer_hand),
         .can_split(can_split),
         .Win(Win),
         .Lose(Lose),
@@ -110,70 +114,71 @@ module tb;
         
         #40 reset = 1;
         #20 reset = 0;
+        $finish;
         
         
         ///////////////////////////////////////////////////////////
         // Test case 2: Double case 
             // Player's first two cards are 10, 8       
             // Press double
-        #40 double = 1;           
-        #20 double = 0;
-            // New card is 2
-            // Press next: go to dealer score phase
-        #40 next = 1;           
-        #20 next = 0;
-            // Press next: go to result phase
-        #40 next = 1;           
-        #20 next = 0;
-        ///////////////////////////////////////////////////////////
+        // #40 double = 1;           
+        // #20 double = 0;
+        //     // New card is 2
+        //     // Press next: go to dealer score phase
+        // #40 next = 1;           
+        // #20 next = 0;
+        //     // Press next: go to result phase
+        // #40 next = 1;           
+        // #20 next = 0;
+        // ///////////////////////////////////////////////////////////
         
         
-        #40 reset = 1;
-        #20 reset = 0;
+        // #40 reset = 1;
+        // #20 reset = 0;
         
         
-        ///////////////////////////////////////////////////////////
-        // Test case 3: Blackjack case 
-            // Player's first two cards are 10, 11     
-            // Press next: go to dealer score phase
-        #40 next = 1;           
-        #20 next = 0;
-            // Press next: go to result phase
-        #40 next = 1;           
-        #20 next = 0;
-        ///////////////////////////////////////////////////////////
+        // ///////////////////////////////////////////////////////////
+        // // Test case 3: Blackjack case 
+        //     // Player's first two cards are 10, 11     
+        //     // Press next: go to dealer score phase
+        // #40 next = 1;           
+        // #20 next = 0;
+        //     // Press next: go to result phase
+        // #40 next = 1;           
+        // #20 next = 0;
+        // ///////////////////////////////////////////////////////////
         
         
-        #40 reset = 1;
-        #20 reset = 0;
+        // #40 reset = 1;
+        // #20 reset = 0;
         
         
         ///////////////////////////////////////////////////////////
         // Test case 4: Split case 
             // Player's first two cards are 10, 10     
             // Press split: go to split phase
-        #40 split = 1;           
-        #20 split = 0;
-            // New card is 8
-            // Press hit
-        #40 hit = 1;           
-        #20 hit = 0;
-            // New card is 4
-            // Hand1's bust: go to hand2 phase
-        #40 next = 1;           
-        #20 next = 0;
-            // New card is 8
-            // Press hit
-        #40 hit = 1;           
-        #20 hit = 0;
-            // New card is 2
-            // Hand2's stand: go to dealer phase
-        #40 stand = 1;           
-        #20 stand = 0;
-            // Press next: go to result phase
-        #40 next = 1;           
-        #20 next = 0;
-        ///////////////////////////////////////////////////////////
+        // #40 split = 1;           
+        // #20 split = 0;
+        //     // New card is 8
+        //     // Press hit
+        // #40 hit = 1;           
+        // #20 hit = 0;
+        //     // New card is 4
+        //     // Hand1's bust: go to hand2 phase
+        // #40 next = 1;           
+        // #20 next = 0;
+        //     // New card is 8
+        //     // Press hit
+        // #40 hit = 1;           
+        // #20 hit = 0;
+        //     // New card is 2
+        //     // Hand2's stand: go to dealer phase
+        // #40 stand = 1;           
+        // #20 stand = 0;
+        //     // Press next: go to result phase
+        // #40 next = 1;           
+        // #20 next = 0;
+        // ///////////////////////////////////////////////////////////
     end
     
 endmodule
