@@ -192,22 +192,22 @@ module blackjack(
                         bj_game_state <= RESULT_PHASE;
                     end 
                     else begin
-                        if (!stand && dealer_score < 17) begin
-                            if (player_hand[1] == player_hand[2] && split_active) begin  // 얘 추가함
-                                split_can <= 1;
-                            end
-                            if (split_can && split) begin    // 얘는 active 여야할듯
-                                hand_count <= 2;
-                                split_hand[1] <= player_hand[2];
-                                player_card_count <= 1;
-                                split_card_count <= 1;
-                                player_score <= calculate_score_with_ace(player_hand[1], player_hand[2], player_hand[3], player_hand[4], player_card_count);
-                                split_score <= calculate_score_with_ace(split_hand[1], split_hand[2], split_hand[3], split_hand[4], split_card_count);
-                                split_active <= 0;
-                                split_complete <= 1;
-                            end 
-                            else if (hit) begin
-                                if (!split_complete) begin
+                        if (!split_complete) begin
+                            if (!stand && dealer_score < 17) begin
+                                if (player_hand[1] == player_hand[2] && split_active) begin  // 얘 추가함
+                                    split_can <= 1;
+                                end
+                                if (split_can && split) begin    // 얘는 active 여야할듯
+                                    hand_count <= 2;
+                                    split_hand[1] <= player_hand[2];
+                                    player_card_count <= 1;
+                                    split_card_count <= 1;
+                                    player_score <= calculate_score_with_ace(player_hand[1], player_hand[2], player_hand[3], player_hand[4], player_card_count);
+                                    split_score <= calculate_score_with_ace(split_hand[1], split_hand[2], split_hand[3], split_hand[4], split_card_count);
+                                    split_active <= 0;
+                                    split_complete <= 1;
+                                end 
+                                else if (hit) begin
                                     player_new_card_reg <= card1;
                                     if (player_card_count == 4'd2) begin
                                         player_card_count <= 4'd3;    // ace 계산 추가해야함
@@ -218,13 +218,8 @@ module blackjack(
                                     player_hand[player_card_count] <= card1;
                                     player_score <= calculate_score_with_ace(player_hand[1], player_hand[2], player_hand[3], player_hand[4], player_card_count);
                                     bj_game_state <= PLAYER_CARD_PHASE;
-                                end else begin
-                                    player_new_card_split_reg <= card2;
-                                    split_score <= split_score + card2;
-                                end
-                            end 
-                            else if (double) begin
-                                if (!split_complete) begin
+                                end 
+                                else if (double) begin
                                     current_coin_reg <= current_coin - bet_amount;  // 돈 부족한 경우는 아직 처리 안 함
                                     bet_amount <= 2 * bet_amount;
                                     player_new_card_reg <= card1;
@@ -232,25 +227,22 @@ module blackjack(
                                     player_hand[player_card_count] <= player_new_card_reg;
                                     player_score <= calculate_score_with_ace(player_hand[1], player_hand[2], player_hand[3], player_hand[4], player_card_count);
                                     bj_game_state <= DEALER_CARD_PHASE;
-                                end else begin
-                                    
                                 end
-                            end
-                            else if (stand) begin
-                                if (!split_complete) begin
+                                else if (stand) begin
                                     if (dealer_score >= 17) begin
                                         bj_game_state <= RESULT_PHASE;
                                     end else begin
                                         bj_game_state <= DEALER_CARD_PHASE;
                                     end
-                                end else begin
-                                    
                                 end
+                            end else if (stand && dealer_score >= 17) begin
+                                bj_game_state <= RESULT_PHASE;
+                            end else begin
+                                bj_game_state <= DEALER_CARD_PHASE;
                             end
-                        end else if (stand && dealer_score >= 17) begin
-                            bj_game_state <= RESULT_PHASE;
-                        end else begin
-                            bj_game_state <= DEALER_CARD_PHASE;
+                        end
+                        else begin
+                            // 여기가 split 시 코드
                         end
                     end
                 end
