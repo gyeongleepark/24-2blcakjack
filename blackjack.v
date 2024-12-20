@@ -192,20 +192,18 @@ module blackjack(
                     current_coin_reg <= initial_coin;
                     // hand over two cards to the player
                     if (!newcard_pulse) begin
+                        trigger_newcard <= 1;
                         player_hand[1] <= card1;
                         player_hand[2] <= card2;
-                        player_card_count <= 4'd2;    // 이거 추가함
-                        player_score <= calculate_score_with_ace(player_hand[1], player_hand[2], player_hand[3], player_hand[4], player_card_count);   // 이거 함수로 바꿈
-                        dealer_hand[1] <= card3;
-                        dealer_hand[2] <= card4;
-                        dealer_card_count <= 4'd2;    // 이것도
-                        dealer_score <= calculate_score_with_ace(dealer_hand[1], dealer_hand[2], dealer_hand[3], delaer_hand[4], dealer_card_count);
+                        player_score <= calculate_score_with_ace(player_hand[1], player_hand[2], player_hand[3], player_hand[4], 2);   // 이거 함수로 바꿈
                     end else begin
                         trigger_newcard <= 0;  // Deassert after one pulse
                     end
                     // move on to dealer phase
                     if (bet_amount > 0) begin
                         bj_game_state <= DEALER_CARD_PHASE;
+                        player_card_count <= 4'd2;    // 이거 추가함
+                        split_card_count <= 4'd2;
                     end
                 end
 
@@ -223,10 +221,10 @@ module blackjack(
                                 if (split_able && split) begin    // 얘는 active 여야할듯
                                     hand_count <= 2;
                                     split_hand[1] <= player_hand[2];
+                                    player_score <= calculate_score_with_ace(player_hand[1], player_hand[2], player_hand[3], player_hand[4], player_card_count-1);
+                                    split_score <= calculate_score_with_ace(split_hand[1], split_hand[2], split_hand[3], split_hand[4], split_card_count-1);
                                     player_card_count <= 1;
                                     split_card_count <= 1;
-                                    player_score <= calculate_score_with_ace(player_hand[1], player_hand[2], player_hand[3], player_hand[4], player_card_count);
-                                    split_score <= calculate_score_with_ace(split_hand[1], split_hand[2], split_hand[3], split_hand[4], split_card_count);
                                     split_active <= 0;
                                     split_complete <= 1;
                                 end 
@@ -234,14 +232,14 @@ module blackjack(
                                     if (!newcard_pulse) begin
                                         trigger_newcard <= 1;
                                         player_new_card_reg <= card1;
+                                        player_hand[player_card_count+1] <= card1;
+                                        player_score <= calculate_score_with_ace(player_hand[1], player_hand[2], player_hand[3], player_hand[4], player_card_count+1);
                                         if (player_card_count == 4'd2) begin
                                             player_card_count <= 4'd3;    // ace 계산 추가해야함
                                         end
                                         else if (player_card_count == 4'd3) begin
                                             player_card_count <= 4'd4;
                                         end
-                                        player_hand[player_card_count] <= card1;
-                                        player_score <= calculate_score_with_ace(player_hand[1], player_hand[2], player_hand[3], player_hand[4], player_card_count);
                                     end else begin
                                         trigger_newcard <= 0;  // Deassert after one pulse
                                         // $display("player_score before: %d", player_score);
@@ -254,9 +252,9 @@ module blackjack(
                                     if (!newcard_pulse) begin
                                         trigger_newcard <= 1;
                                         player_new_card_reg <= card1;
+                                        player_hand[player_card_count+1] <= player_new_card_reg;
+                                        player_score <= calculate_score_with_ace(player_hand[1], player_hand[2], player_hand[3], player_hand[4], player_card_count+1);
                                         player_card_count <= player_card_count + 1;    // ace 계산 추가해야함
-                                        player_hand[player_card_count] <= player_new_card_reg;
-                                        player_score <= calculate_score_with_ace(player_hand[1], player_hand[2], player_hand[3], player_hand[4], player_card_count);
                                     end else begin
                                         trigger_newcard <= 0;  // Deassert after one pulse
                                         // $display("player_score before: %d", player_score);
@@ -314,19 +312,19 @@ module blackjack(
                         if (!newcard_pulse) begin
                             trigger_newcard <= 1;
                             dealer_new_card_reg <= card1;
-                            if (dealer_card_count == 4'd2) begin
-                                dealer_card_count <= 4'd3;
-                            end
-                            else if (dealer_card_count == 4'd3) begin
-                                dealer_card_count <= 4'd4;
-                            end
-                            dealer_hand[dealer_card_count] <= dealer_new_card_reg;
-                            dealer_score <= calculate_score_with_ace(dealer_hand[1], dealer_hand[2], dealer_hand[3], delaer_hand[4], dealer_card_count);
+                            dealer_hand[dealer_card_count+1] <= card1;
+                            //dealer_score <= calculate_score_with_ace(dealer_hand[1], dealer_hand[2], dealer_hand[3], delaer_hand[4], dealer_card_count);
                         end else begin
                             trigger_newcard <= 0;
                             dealer_score <= calculate_score_with_ace(dealer_hand[1], dealer_hand[2], dealer_hand[3], delaer_hand[4], dealer_card_count);
                         end
                         bj_game_state <= DEALER_CARD_PHASE;   //  이거 수정함
+                        if (dealer_card_count == 4'd2) begin
+                                dealer_card_count <= 4'd3;
+                        end
+                        else if (dealer_card_count == 4'd3) begin
+                            dealer_card_count <= 4'd4;
+                        end
                     end
                     else begin
                         bj_game_state <= RESULT_PHASE;
