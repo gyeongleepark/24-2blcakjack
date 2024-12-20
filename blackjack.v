@@ -48,9 +48,8 @@ module blackjack(
     reg win_reg;
     reg lose_reg;
     reg draw_reg;
-    reg lose_p, lose_s, win_p, win_s, draw_p,draw_s;
 
-    //reg split_can;       // 처음 card1 = card2
+    reg split_able;       // 처음 card1 = card2
     reg split_active;    // split 한 적 없으면 1 있으면 0
     reg split_complete;  // split 함
     reg first_turn;
@@ -105,7 +104,6 @@ module blackjack(
                     SPLIT1_PHASE = 3'b100,
                     SPLIT2_PHASE = 3'b101;
     reg [2:0] bj_game_state;
-
     integer i, j;
     
 
@@ -125,15 +123,10 @@ module blackjack(
             draw_reg <= 0;
             split_active <= 1;
             split_complete <= 0;
+            split_able <= 0;
             first_turn <= 1;
             blackjack_win <= 0;
             trigger_newcard <= 0;
-            lose_p <= 0;
-            lose_s <=0;
-            win_p <= 0;
-            win_s <= 0;
-            draw_p <= 0;
-            draw_s <= 0;
             i = 3;
             j = 3;
         end else begin
@@ -153,31 +146,22 @@ module blackjack(
                             player_score <= player_hand[1] + player_hand[2] + 10;
                         end
                         if(player_hand[1]==player_hand[2]) begin
-                            split_complete <= 1;
-                        end 
-                        if (split && split_complete && split_active) begin
-                            trigger_newcard <= 1;
-                            split_card1 <= card1;
-                            split_card2 <= card2;
-                            player_score <= card1;
-                            split_score <= card2;
-                            split_complete <= 1'b1;
-                            split_active <= 1'b0;
-                            bj_game_state <= SPLIT1_PHASE;
+                            split_able <= 1;
                         end 
                     end else begin
                         trigger_newcard <= 0;  // Deassert after one pulse
                     end
                     // move on to dealer phase
-                    if (bet_amount > 0 && next) begin
+                    if (bet_amount > 0) begin
                         bj_game_state <= DEALER_CARD_PHASE;
                     end
                 end
                 SPLIT1_PHASE: 
                     if (player_score >= 21) begin
+                        if(next) begin
                         bj_game_state <= SPLIT2_PHASE;
+                        end
                     end 
-                    
                     else if (!stand && !next) begin
                             // hit
                         if (hit) begin
@@ -192,7 +176,7 @@ module blackjack(
                                 // $display("player_score after: %d", player_score);
                             end
                                 bj_game_state <= SPLIT1_PHASE;
-                            end 
+                        end 
                         else if (double) begin
                             if (!newcard_pulse) begin
                                 trigger_newcard <= 1;
@@ -205,15 +189,18 @@ module blackjack(
                                 // $display("player_score after: %d", player_score);
                             end
                                 bj_game_state <= SPLIT2_PHASE;
-                            end
-                    end 
+                        end
+                    end
+                         
                     else begin
                             // if not bust, go to the dealer phase 
                             bj_game_state <= SPLIT2_PHASE;
                     end
                 SPLIT2_PHASE: 
                     if (split_score >= 21) begin
+                        if(next) begin
                         bj_game_state <= DEALER_CARD_PHASE;
+                        end
                     end 
                     
                     else if (!stand && !next) begin
@@ -251,7 +238,18 @@ module blackjack(
                     end
 
                 PLAYER_CARD_PHASE: begin
+                    if (split && split_able && split_active) begin
+                    trigger_newcard <= 1;
+                    split_card1 <= card1;
+                    split_card2 <= card2;
+                    player_score <= card1;
+                    split_score <= card2;
+                    split_complete <= 1'b1;
+                    split_active <= 1'b0;
+                    bj_game_state <= SPLIT1_PHASE;
+                    end 
                     // player bust
+                    else begin
                     if (player_score >= 21 || dealer_score == 21) begin
                         bj_game_state <= RESULT_PHASE;
                     end 
@@ -259,7 +257,7 @@ module blackjack(
                         if (!stand) begin
                             // hit
                             if (hit) begin
-                                if (!split_complete) begin
+                                if (!split_active) begin
                                     if (!newcard_pulse) begin
                                         trigger_newcard <= 1;
                                         player_hand[i] <= card1;
@@ -293,7 +291,7 @@ module blackjack(
                         end
                     end
                 end
-
+             end 
                 DEALER_CARD_PHASE: begin
                     if (first_turn) begin
                         // hand over two cards to the dealer
@@ -359,45 +357,42 @@ module blackjack(
                     end
                     else begin
                     
-                    lose_p <= ((player_score < dealer_score && dealer_score <= 21) || player_score > 21);
-                    lose_s <= ((split_score < dealer_score && dealer_score <= 21) || split_score > 21);
-                    win_p <= ((player_score > dealer_score && player_score <= 21) || dealer_score > 21);
-                    win_s <= ((split_score > dealer_score && split_score <= 21) || dealer_score > 21);
-                    draw_s <= !(lose_s || win_s); // 논리 NOT 사용
-                    draw_p <= !(lose_s || win_p); // 논리 NOT 사용
 
-                    if (lose_s&&lose_p) begin
+                    if (((player_score < dealer_score && dealer_score <= 21) || player_score > 21)&&((split_score < dealer_score && dealer_score <= 21) || split_score > 21)) begin
                         win_reg  <= 1'b0;
                         lose_reg <= 1'b1;
                         draw_reg <= 1'b0;
                         $display("you lose");
                     end 
-                    else if (win_s&&win_p) begin
+                    else if (((split_score > dealer_score && split_score <= 21) || dealer_score > 21)&&((player_score > dealer_score && player_score <= 21) || dealer_score > 21)) begin
                         win_reg  <= 1'b1;
                         lose_reg <= 1'b0;
                         draw_reg <= 1'b0;
                         $display("you win!");
                     end 
-                    else if(draw_s&&draw_p) begin
+                    else if(!(((split_score < dealer_score && dealer_score <= 21) || split_score > 21) || ((split_score > dealer_score && split_score <= 21) || dealer_score > 21))
+                    &&draw_p) begin
                         win_reg  <= 1'b0;
                         lose_reg <= 1'b0;
                         draw_reg <= 1'b1;
                         $display("draw");
                     
                     end
-                     else if(lose_p&&draw_s||lose_s&&draw_p) begin
+                     else if(((player_score < dealer_score && dealer_score <= 21) || player_score > 21)&&!(((split_score < dealer_score && dealer_score <= 21) || split_score > 21) || ((split_score > dealer_score && split_score <= 21) || dealer_score > 21))||((split_score < dealer_score && dealer_score <= 21) || split_score > 21)&&!(((split_score < dealer_score && dealer_score <= 21) || split_score > 21)|| ((player_score > dealer_score && player_score <= 21) || dealer_score > 21))) begin
                         win_reg  <= 1'b0;
                         lose_reg <= 1'b1;
                         draw_reg <= 1'b1;
                         $display("draw");
                     end    
-                    else if(lose_s&&win_p||win_s&&lose_p)begin
+                    else if(((split_score < dealer_score && dealer_score <= 21) || split_score > 21)&&((player_score > dealer_score && player_score <= 21) || dealer_score > 21)||((split_score > dealer_score && split_score <= 21) || dealer_score > 21)&&((player_score < dealer_score && dealer_score <= 21) || player_score > 21))begin
                         win_reg  <= 1'b1;
                         lose_reg <= 1'b1;
                         draw_reg <= 1'b0;
                         $display("draw");
                     end
-                    else if(draw_p&&win_s||draw_s&&win_p)begin
+                    else if(!(((split_score < dealer_score && dealer_score <= 21) || split_score > 21)|| ((player_score > dealer_score && player_score <= 21) || dealer_score > 21))
+                    &&!((split_score > dealer_score && split_score <= 21) || dealer_score > 21)||
+                    ((player_score > dealer_score && player_score <= 21) || dealer_score > 21))begin
                         win_reg  <= 1'b1;
                         lose_reg <= 1'b0;
                         draw_reg <= 1'b1;
@@ -420,7 +415,7 @@ module blackjack(
     assign player_new_card = player_new_card_reg;
     assign player_new_card_split = player_new_card_split_reg;
     assign current_coin = current_coin_reg;
-    assign split_can = split_complete;
+    assign split_can = split_able;
 
     assign Win = win_reg;
     assign Lose = lose_reg;
