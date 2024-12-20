@@ -114,7 +114,7 @@ module blackjack(
         .on(newcard_pulse),
         .test(3'b001),
         .card1_out(card1),
-        .card2_out(card2),
+        .card2_out(card2)
     );
 
     //-----------------------------------------
@@ -214,8 +214,8 @@ module blackjack(
                     end 
                     else begin
                         if (!split_complete) begin
-                            if (!stand && dealer_score < 17) begin
-                                if (player_hand[1] == player_hand[2] && split_active) begin  // 얘 추가함
+                            if (!stand) begin
+                                if ((player_hand[1] == player_hand[2]) && split_active) begin  // 얘 추가함
                                     split_able <= 1;
                                 end
                                 if (split_able && split) begin    // 얘는 active 여야할듯
@@ -290,11 +290,11 @@ module blackjack(
                             dealer_hand[1] <= card1;
                             dealer_hand[2] <= card2;
                             dealer_card_count <= 4'd2;
-                            dealer_score <= calculate_score_with_ace(dealer_hand[1], dealer_hand[2], dealer_hand[3], delaer_hand[4], dealer_card_count);
+                            dealer_score <= calculate_score_with_ace(dealer_hand[1], dealer_hand[2], dealer_hand[3], dealer_hand[4], dealer_card_count);
                         end else begin
                             trigger_newcard <= 0;  // Deassert after one pulse
                             // $display("dealer_score before: %d", dealer_score);
-                            dealer_score <= calculate_score_with_ace(dealer_hand[1], dealer_hand[2], dealer_hand[3], delaer_hand[4], dealer_card_count);
+                            dealer_score <= calculate_score_with_ace(dealer_hand[1], dealer_hand[2], dealer_hand[3], dealer_hand[4], dealer_card_count);
                             // $display("dealer_score after: %d", dealer_score);
                         end
                         // reveal one of the cards
@@ -313,10 +313,10 @@ module blackjack(
                             trigger_newcard <= 1;
                             dealer_new_card_reg <= card1;
                             dealer_hand[dealer_card_count+1] <= card1;
-                            //dealer_score <= calculate_score_with_ace(dealer_hand[1], dealer_hand[2], dealer_hand[3], delaer_hand[4], dealer_card_count);
+                            //dealer_score <= calculate_score_with_ace(dealer_hand[1], dealer_hand[2], dealer_hand[3], dealer_hand[4], dealer_card_count);
                         end else begin
                             trigger_newcard <= 0;
-                            dealer_score <= calculate_score_with_ace(dealer_hand[1], dealer_hand[2], dealer_hand[3], delaer_hand[4], dealer_card_count);
+                            dealer_score <= calculate_score_with_ace(dealer_hand[1], dealer_hand[2], dealer_hand[3], dealer_hand[4], dealer_card_count);
                         end
                         bj_game_state <= DEALER_CARD_PHASE;   //  이거 수정함
                         if (dealer_card_count == 4'd2) begin
