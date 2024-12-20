@@ -103,54 +103,55 @@ module tb;
         // Test case 1: Simple case 
             // Player's first two cards are 10, 8       
             // Press hit
-        #40 hit = 1;           
-        #20 hit = 0;
-            // New card is 4
-            // Player's bust: go directly to result phase
-        #40 next = 1;           
-        #20 next = 0;
-        ///////////////////////////////////////////////////////////
+//        #40 hit = 1;           
+//        #20 hit = 0;
+//            // New card is 4
+//            // Player's bust: go directly to result phase
+//        #40 next = 1;           
+//        #20 next = 0;
+//        ///////////////////////////////////////////////////////////
         
         
-        #40 reset = 1;
-        #20 reset = 0;
-        $finish;
+//        #40 reset = 1;
+//        #20 reset = 0;
+//        $finish;
         
         
         ///////////////////////////////////////////////////////////
         // Test case 2: Double case 
             // Player's first two cards are 10, 8       
             // Press double
-        // #40 double = 1;           
-        // #20 double = 0;
-        //     // New card is 2
-        //     // Press next: go to dealer score phase
-        // #40 next = 1;           
-        // #20 next = 0;
-        //     // Press next: go to result phase
-        // #40 next = 1;           
-        // #20 next = 0;
-        // ///////////////////////////////////////////////////////////
+         #40 double = 1;           
+         #20 double = 0;
+             // New card is 2
+             // Press next: go to dealer score phase
+         #40 next = 1;           
+         #20 next = 0;
+             // Press next: go to result phase
+         #40 next = 1;           
+         #20 next = 0;
+         ///////////////////////////////////////////////////////////
         
         
-        // #40 reset = 1;
-        // #20 reset = 0;
+         #40 reset = 1;
+         #20 reset = 0;
         
         
         // ///////////////////////////////////////////////////////////
         // // Test case 3: Blackjack case 
         //     // Player's first two cards are 10, 11     
         //     // Press next: go to dealer score phase
-        // #40 next = 1;           
-        // #20 next = 0;
-        //     // Press next: go to result phase
-        // #40 next = 1;           
-        // #20 next = 0;
-        // ///////////////////////////////////////////////////////////
+//         #40 next = 1;           
+//         #20 next = 0;
+//             // Press next: go to result phase
+//         #40 next = 1;           
+//         #20 next = 0;
+//         ///////////////////////////////////////////////////////////
         
         
-        // #40 reset = 1;
-        // #20 reset = 0;
+//         #40 reset = 1;
+//         #20 reset = 0;
+         $finish;
         
         
         ///////////////////////////////////////////////////////////

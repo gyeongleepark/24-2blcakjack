@@ -19,8 +19,8 @@ module blackjack(
     output [5:0] player_new_card_split,
     output [5:0] dealer_current_score,
     output [4:0] current_coin,
-    // output [5:0] player_hand[1:4],
-    // output [5:0] dealer_hand[1:4],
+    output [5:0] player_hand[1:4],
+    output [5:0] dealer_hand[1:4],
     output can_split,
     output Win,
     output Lose,
@@ -48,7 +48,30 @@ module blackjack(
     reg lose_reg;
     reg draw_reg;
 
+    reg hit_before;
+    reg hit_after = 1'b0;
+    reg hit_pulse;
+
+    reg stand_before;
+    reg stand_after = 1'b0;
+    reg stand_pulse;
+
+    reg rst_before;
+    reg rst_after = 1'b0;
+    reg rst_pulse;
+
+    reg next_before;
+    reg next_after = 1'b0;
+    reg next_pulse;
+
+    reg double_before;
+    reg double_after = 1'b0;
+    reg double_pulse;
+
+    reg split_before;
+    reg split_after = 1'b0;
     reg split_pulse;
+
     reg first_turn;
 
     reg blackjack_win;
@@ -70,6 +93,12 @@ module blackjack(
         .card2_out(card2)
     );
 
+    debouncer db_rst(reset, clk, rst_reg);
+    debouncer db_next(next, clk, nxt_reg);
+    debouncer db_hit(hit, clk, hit_reg);
+    debouncer db_stand(stand, clk, stand_reg);
+    debouncer db_double(double, clk, double_reg);
+
     //-----------------------------------------
     //       Card generation pulse
     //-----------------------------------------
@@ -86,6 +115,84 @@ module blackjack(
             if (newcard_pulse) begin
                 trigger_newcard <= 0;  // Turn off trigger
             end
+        end
+    end
+
+    //-----------------------------------------
+    //       Button input pulse
+    //-----------------------------------------
+    always @ (posedge clk) 
+    begin
+        // Create hit pulse
+        hit_before <= hit_reg;
+        hit_after <= hit_before;
+        if (hit_before != hit_after && hit_before) 
+        begin
+            hit_pulse <= 1'b1;
+        end
+        else
+        begin
+            hit_pulse <= 1'b0;
+        end
+
+        // Create Stand pulse
+        stand_before <= stand_reg;
+        stand_after <= stand_before;
+        if (stand_before != stand_after && stand_before) 
+        begin
+            stand_pulse <= 1'b1;
+        end
+        else
+        begin
+            stand_pulse <= 1'b0;
+        end
+
+        // Create Rst pulse
+        rst_before <= rst_reg;
+        rst_after <= rst_before;
+        if (rst_before != rst_after && rst_before) 
+        begin
+            rst_pulse <= 1'b1;
+        end
+        else
+        begin
+            rst_pulse <= 1'b0;
+        end
+
+         // Create double pulse
+        double_before <= double_reg;
+        double_after <= double_before;
+        if (double_before != double_after && double_before) 
+        begin
+            double_pulse <= 1'b1;
+        end
+        else
+        begin
+            double_pulse <= 1'b0;
+        end
+
+         // Create next pulse
+        next_before <= nxt_reg;
+        next_after <= next_before;
+        if (next_before != next_after && next_before) 
+        begin
+            next_pulse <= 1'b1;
+        end
+        else
+        begin
+            next_pulse <= 1'b0;
+        end
+
+        // Create split pulse
+        split_before <= split_reg;
+        split_after <= split_before;
+        if (split_before != split_after && split_before) 
+        begin
+            split_pulse <= 1'b1;
+        end
+        else
+        begin
+            split_pulse <= 1'b0;
         end
     end
 
@@ -141,7 +248,7 @@ module blackjack(
                         trigger_newcard <= 0;  // Deassert after one pulse
                     end
                     // move on to dealer phase
-                    if (bet_amount > 0 && next) begin
+                    if (bet_amount > 0 && next_pulse) begin
                         bj_game_state <= DEALER_CARD_PHASE;
                     end
                 end
@@ -152,9 +259,9 @@ module blackjack(
                         bj_game_state <= RESULT_PHASE;
                     end 
                     else begin
-                        if (!stand) begin
+                        if (!stand_pulse) begin
                             // split
-                            if (split && split_pulse) begin
+                            if (split_pulse) begin
                                 trigger_newcard <= 1;
                                 split_card1 <= card1;
                                 split_card2 <= card2;
@@ -164,7 +271,7 @@ module blackjack(
                                 split_pulse <= 1'b0;
                             end 
                             // hit
-                            else if (hit) begin
+                            else if (hit_pulse) begin
                                 if (!split_active) begin
                                     if (!newcard_pulse) begin
                                         trigger_newcard <= 1;
@@ -184,7 +291,7 @@ module blackjack(
                                 end
                             end 
                             // double
-                            else if (double) begin
+                            else if (double_pulse) begin
                                 if (!newcard_pulse) begin
                                     trigger_newcard <= 1;
                                     player_hand[i] <= card1;
@@ -218,7 +325,7 @@ module blackjack(
                             // $display("dealer_score after: %d", dealer_score);
                         end
                         // reveal one of the cards
-                        if (next) begin
+                        if (next_pulse) begin
                             bj_game_state <= PLAYER_CARD_PHASE;
                             first_turn = 1'b0;
                         end
@@ -266,7 +373,7 @@ module blackjack(
                         $display("draw");
                     end
                     split_active <= 0;
-                    if (next) begin
+                    if (next_pulse) begin
                         bj_game_state <= BETTING_PHASE;
                         first_turn <= 1;
                     end

@@ -86,7 +86,7 @@ module card_generation(
                             case (counter_double)
                                 4'b0000: if (on) begin card1 <= 4'd10; card2 <= 4'd8; counter_double <= counter_double + 4'd1; end
                                 4'b0001: if (on) begin card1 <= rand1[3:0]; card2 <= rand2[3:0]; rand1 <= rand1 >> 1; rand2 <= rand2 >> 1; 
-                                counter_double <= counter_double + 4'd1; end
+                                counter_double <= counter_double + 4'd1; end // successs!!!!
                                 4'b0010: if (on) begin card1 <= 4'd2; card2 <= 4'd0; counter_double <= 4'd0; end
                                 default: begin card1 <= 4'd0; card2 <= 4'd0; end
                             endcase
