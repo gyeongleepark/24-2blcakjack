@@ -25,6 +25,7 @@ module tb;
     
     // Outputs from the top module
     wire [5:0] player_current_score, player_new_card;
+    wire [5:0] dealer_new_card;
     wire [5:0] player_current_score_split, player_new_card_split;
     wire [5:0] dealer_current_score;
     wire [4:0] current_coin;
@@ -48,6 +49,7 @@ module tb;
         .bet_1(bet_1),
         .player_current_score(player_current_score),
         .player_new_card(player_new_card),
+        .dealer_new_card(dealer_new_card),
         .player_current_score_split(player_current_score_split),
         .player_new_card_split(player_new_card_split),
         .dealer_current_score(dealer_current_score),
@@ -110,6 +112,12 @@ module tb;
         
         #40 reset = 1;
         #20 reset = 0;
+
+        // Bet coins
+        #20 bet_8 = 0;
+            bet_4 = 0;
+            bet_2 = 1;
+            bet_1 = 1;
         
 	    // Press next button (Betting phase -> Dealer card phase)
         #20 next = 1;
@@ -138,6 +146,12 @@ module tb;
         #40 reset = 1;
         #20 reset = 0;
 
+        // Bet coins
+        #20 bet_8 = 0;
+            bet_4 = 1;
+            bet_2 = 1;
+            bet_1 = 1;
+
 	    // Press next button (Betting phase -> Dealer card phase)
         #20 next = 1;
         #20 next = 0;
@@ -160,6 +174,12 @@ module tb;
         
         #40 reset = 1;
         #20 reset = 0;
+
+        // Bet coins
+        #20 bet_8 = 1;
+            bet_4 = 0;
+            bet_2 = 1;
+            bet_1 = 0;
         
 	    // Press next button (Betting phase -> Dealer card phase)
         #20 next = 1;
