@@ -148,8 +148,10 @@ module blackjack(
     parameter [2:0] BETTING_PHASE = 3'b000,
                     DEALER_CARD_PHASE = 3'b001,
                     PLAYER_CARD_PHASE = 3'b010,
-                    RESULT_PHASE = 3'b011, SPLIT1_PHASE=3'b100, SPLIT2_PHASE=3'b101;
-    reg [1:0] bj_game_state;
+                    RESULT_PHASE = 3'b011,
+                    SPLIT1_PHASE=3'b100, 
+                    SPLIT2_PHASE=3'b101;
+    reg [2:0] bj_game_state;
 
     //integer i;
 
@@ -180,27 +182,25 @@ module blackjack(
             split1_count <= 2'd2;
             split2_count <= 2'd2;
 
-            player_hand[1] <= 0;
-            player_hand[2] <= 0;
-            player_hand[3] <= 0;
-            player_hand[4] <= 0;
+            // player_hand[1] <= 0;
+            // player_hand[2] <= 0;
+            // player_hand[3] <= 0;
+            // player_hand[4] <= 0;
 
-            dealer_hand[1] <= 0;
-            dealer_hand[2] <= 0;
-            dealer_hand[3] <= 0;
-            dealer_hand[4] <= 0;
+            // dealer_hand[1] <= 0;
+            // dealer_hand[2] <= 0;
+            // dealer_hand[3] <= 0;
+            // dealer_hand[4] <= 0;
 
-            split1_hand[1] <= 6'd0;
-            split1_hand[2] <= 6'd0;
-            split1_hand[3] <= 6'd0;
-            split1_hand[4] <= 6'd0;
+            // split1_hand[1] <= 6'd0;
+            // split1_hand[2] <= 6'd0;
+            // split1_hand[3] <= 6'd0;
+            // split1_hand[4] <= 6'd0;
             
-            
-            split2_hand[1] <= 6'd0;
-            split2_hand[2] <= 6'd0;
-            split2_hand[3] <= 6'd0;
-            split2_hand[4] <= 6'd0;
-
+            // split2_hand[1] <= 6'd0;
+            // split2_hand[2] <= 6'd0;
+            // split2_hand[3] <= 6'd0;
+            // split2_hand[4] <= 6'd0;
         end else begin
             case (bj_game_state)
                 BETTING_PHASE: begin
@@ -324,7 +324,7 @@ module blackjack(
                         if (!stand) begin
                             if (split_able && split && split_active) begin    // 얘는 active 여야할듯
                                 hand_count <= 2;
-                                 bj_game_state <= 3'b100;
+                                bj_game_state <= SPLIT1_PHASE;
                                 split1_hand[1] <= player_hand[1];
                                 split2_hand[1] <= player_hand[2];
                                 split1_score <= player_hand[1];
@@ -385,7 +385,6 @@ module blackjack(
                         end
                     end
                 end
-
 
                 DEALER_CARD_PHASE: begin
                     if (first_turn) begin
