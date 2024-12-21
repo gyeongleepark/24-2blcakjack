@@ -333,6 +333,7 @@ module blackjack(
                                 //split_card_count <= 1;
                                 split_active <= 0;
                                 split_complete <= 1;
+                                bj_game_state <= SPLIT1_PHASE;
                             end 
                             else if (hit && !split_complete) begin
                                 if (!newcard_pulse) begin
@@ -361,20 +362,14 @@ module blackjack(
                                     player_hand[player_card_count+1] <= player_new_card_reg;
                                     player_score <= calculate_score_with_ace(player_hand[1], player_hand[2], player_hand[3], player_hand[4], player_card_count+1);
                                     player_card_count <= player_card_count + 1;    // ace 계산 추가해야함
-                                end else begin
+                                end 
+                                else begin
                                     trigger_newcard <= 0;  // Deassert after one pulse
                                     // $display("player_score before: %d", player_score);
                                     player_score <= calculate_score_with_ace(player_hand[1], player_hand[2], player_hand[3], player_hand[4], player_card_count);
                                     // $display("player_score after: %d", player_score);
                                 end
                                 bj_game_state <= DEALER_CARD_PHASE;
-                            end
-                            else if (stand && !split_complete) begin
-                                if (dealer_score >= 17) begin
-                                    bj_game_state <= RESULT_PHASE;
-                                end else begin
-                                    bj_game_state <= DEALER_CARD_PHASE;
-                                end
                             end
                         end 
                         else if (stand && dealer_score >= 17) begin
@@ -385,7 +380,6 @@ module blackjack(
                         end
                     end
                 end
-
 
                 DEALER_CARD_PHASE: begin
                     if (first_turn) begin
