@@ -54,7 +54,7 @@ module blackjack(
     reg [5:0] bet_amount;
     reg [4:0] initial_coin = 5'd30;
 
-    reg split_able;       // condition check card1 = card2
+    reg split_able;      // condition check card1 = card2
     reg split_active;    // if split done raise 1
     reg split_complete;  // split complete
     reg first_turn;
