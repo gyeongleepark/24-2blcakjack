@@ -284,6 +284,7 @@ module blackjack(
                                         // $display("player_score after: %d", player_score);
                                     end
                                     bj_game_state <= PLAYER_CARD_PHASE;
+                                    i <= i + 1;
                                 end else begin
                                     trigger_newcard <= 1;
                                     player_new_card_split_reg <= card2;
