@@ -37,6 +37,15 @@ module blackjack(
     reg win_reg;
     reg lose_reg;
     reg draw_reg;
+    reg 1_win_reg;
+    reg 1_lose_reg;
+    reg 1_draw_reg;
+    reg 2_win_reg;
+    reg 2_lose_reg;
+    reg 2_draw_reg;
+
+    reg 1_double;
+    reg 2_double;
 
     reg hit_before;
     reg hit_after = 1'b0;
@@ -316,6 +325,16 @@ module blackjack(
             win_reg <= 0;
             lose_reg <= 0;
             draw_reg <= 0;
+
+            1_win_reg <= 0;
+            1_lose_reg <= 0;
+            1_draw_reg <= 0;
+            2_win_reg <= 0;
+            2_lose_reg <= 0;
+            2_draw_reg <= 0;
+            1_double <= 0;
+            2_double <= 0;
+            
             split_active <= 1;
             split_complete <= 0;
             split_able <= 0;
@@ -662,6 +681,7 @@ module blackjack(
                                     trigger_newcard <= 0;  // Deassert after one pulse
                                     bj_game_state <= SPLIT1_DOUBLE_PHASE;
                                 end
+                                1_double <= 1;
                             end
                             else if (stand_pulse && split_complete) begin
                                 ace_num_p <= 0;
@@ -732,6 +752,7 @@ module blackjack(
                                     trigger_newcard <= 0;  // Deassert after one pulse
                                     bj_game_state <= SPLIT2_DOUBLE_PHASE;
                                 end
+                                2_double <= 1;
                                 // if (next_pulse) begin
                                 //     bj_game_state <= DEALER_CARD_PHASE;
                                 // end
@@ -946,34 +967,59 @@ module blackjack(
                 end
                 RESULT_PHASE: begin
                     if (split2_active) begin
-                        // condition check
-                        if (((split1_score < dealer_score && dealer_score <= 21) || split1_score > 21) || 
-                        (split2_score > 21 || (split2_score < dealer_score && dealer_score <= 21))) begin
-                            split_lose <= 1'b1;
-                            split_win <= 1'b0;
-                            split_draw <= 1'b0;
-                        end
-                        else if (((split1_score > dealer_score && split1_score <= 21) || dealer_score > 21) || 
-                        (dealer_score < 21 || (split2_score > dealer_score && split2_score <= 21))) begin
-                            split_win <= 1'b1;
-                            split_lose <= 1'b0;
-                            split_draw <= 1'b0;
-                        end
-                        else begin
-                            split_win <= 1'b0;
-                            split_lose <= 1'b0;
-                            split_draw <= 1'b1;
-                        end
-                        // assert leg
-                        if (split_lose) begin
+                        // split1 result
+                        if ((split1_score < dealer_score && dealer_score <= 21) 
+                            || split1_score > 21) begin
+                            1_win_reg  <= 1'b0;
+                            1_lose_reg <= 1'b1;
+                            1_draw_reg <= 1'b0;
                             lose_reg <= 1'b1;
-                            $display("split lose");
-                        end else if (split_win) begin
+                            $display("split hand1 lose");
+                        end 
+                        else if ((split1_score > dealer_score && split1_score <= 21) 
+                            || dealer_score > 21) begin
+                            if (split1_score == 21) begin
+                                blackjack_win <= 1'b1;
+                            end
+                            1_win_reg  <= 1'b1;
+                            1_lose_reg <= 1'b0;
+                            1_draw_reg <= 1'b0;
                             win_reg <= 1'b1;
-                            $display("split win");
-                        end else begin
+                            $display("split hand1 win!");
+                        end 
+                        else begin
+                            1_win_reg  <= 1'b0;
+                            1_lose_reg <= 1'b0;
+                            1_draw_reg <= 1'b1;
                             draw_reg <= 1'b1;
-                            $display("split draw");
+                            $display("split hand1 draw");
+                        end
+                        // split2 result
+                        if ((split2_score < dealer_score && dealer_score <= 21) 
+                            || split2_score > 21) begin
+                            2_win_reg  <= 1'b0;
+                            2_lose_reg <= 1'b1;
+                            2_draw_reg <= 1'b0;
+                            lose_reg <= 1'b1;
+                            $display("split hand2 lose");
+                        end 
+                        else if ((split2_score > dealer_score && split2_score <= 21) 
+                            || dealer_score > 21) begin
+                            if (split2_score == 21) begin
+                                blackjack_win <= 1'b1;
+                            end
+                            2_win_reg  <= 1'b1;
+                            2_lose_reg <= 1'b0;
+                            2_draw_reg <= 1'b0;
+                            win_reg <= 1'b1;
+                            $display("split hand2 win!");
+                        end 
+                        else begin
+                            2_win_reg  <= 1'b0;
+                            2_lose_reg <= 1'b0;
+                            2_draw_reg <= 1'b1;
+                            draw_reg <= 1'b1;
+                            $display("split hand2 draw");
                         end
 
                         if (next_pulse) begin
@@ -992,7 +1038,7 @@ module blackjack(
                             new_game <= 1;
                         end
                     end else begin
-                        // normal situations
+                        // player result
                         if ((player_score < dealer_score && dealer_score <= 21) 
                             || player_score > 21) begin
                             win_reg  <= 1'b0;
@@ -1016,6 +1062,7 @@ module blackjack(
                             draw_reg <= 1'b1;
                             $display("draw");
                         end
+                    
                         split_active <= 0;
                         if (next_pulse) begin
                             bj_game_state <= BETTING_PHASE;
@@ -1067,23 +1114,54 @@ module blackjack(
                 current_coin_reg <= current_coin_reg - bet_amount;
             end
 
-            if (double_pulse) begin
+            if (!split2_active && double_pulse) begin       // 확인. split(x) doulbe(o) 일 때
                 current_coin_reg <= current_coin_reg - bet_amount;
                 bet_amount <= bet_amount * 2;
             end
 
             if (bj_game_state == RESULT_PHASE) begin
-                if (win_reg) begin
-                    if (blackjack_win) begin
-                        current_coin_reg <= current_coin_reg + 4 * bet_amount;
-                        blackjack_win <= 1'b0;
-                    end else begin
-                        current_coin_reg <= current_coin_reg + 2 * bet_amount; 
+                if (!split_complete) begin
+                    if (win_reg) begin
+                        if (blackjack_win) begin
+                            current_coin_reg <= current_coin_reg + 4 * bet_amount;
+                            blackjack_win <= 1'b0;
+                        end else begin
+                            current_coin_reg <= current_coin_reg + 2 * bet_amount; 
+                        end
+                    end else if (lose_reg) begin
+                        current_coin_reg <= current_coin_reg;
+                    end else if (draw_reg) begin
+                        current_coin_reg <= current_coin_reg + bet_amount;
                     end
-                end else if (lose_reg) begin
-                    current_coin_reg <= current_coin_reg;
-                end else if (draw_reg) begin
-                    current_coin_reg <= current_coin_reg + bet_amount;
+                end
+                else begin
+                    if (1_win_reg && 2_win_reg) begin
+                        if (1_double && 2_double) begin
+                            current_coin_reg <= current_coin_reg + (-1 + 3 + 3) * bet_amount;
+                        end else if ((1_double && !2_double) || (!1_double && 2_double)) begin
+                            current_coin_reg <= current_coin_reg + (-1 + 3 + 2) * bet_amount;
+                        end else if (!1_double && !2_double) begin
+                            current_coin_reg <= current_coin_reg + (-1 + 2 + 2) * bet_amount;
+                        end 
+                    end else if ((1_win_reg && 2_lose_reg) || (1_lose_reg && 2_win_reg)) begin
+                        if (1_win_reg && 1_double || 2_win_reg && 2_double) begin
+                            current_coin_reg <= current_coin_reg + (-1 + 3) * bet_amount;
+                        end else begin
+                            current_coin_reg <= current_coin_reg + (-1 + 2) * bet_amount;
+                        end
+                    end else if ((1_win_reg && 2_draw_reg) || (1_draw_reg && 2_win_reg)) begin
+                        if (1_win_reg && 1_double || 2_win_reg && 2_double) begin
+                            current_coin_reg <= current_coin_reg + (-1 + 3 + 1) * bet_amount;
+                        end else begin
+                            current_coin_reg <= current_coin_reg + (-1 + 2 + 1) * bet_amount;
+                        end
+                    end else if (1_lose_reg && 2_lose_reg) begin
+                        current_coin_reg <= current_coin_reg + (-1) * bet_amount;
+                    end else if ((1_lose_reg && 2_draw_reg) || (1_draw_reg && 2_lose_reg)) begin
+                        current_coin_reg <= current_coin_reg + (-1 + 1) * bet_amount;
+                    end else if (1_draw_reg && 2_draw_reg) begin
+                        current_coin_reg <= current_coin_reg + (-1 + 1 + 1) * bet_amount;
+                    end
                 end
             end
         end
