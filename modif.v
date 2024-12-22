@@ -646,35 +646,39 @@ module blackjack(
                                 end
                             end
                             bj_game_state <= SPLIT1_PHASE;
-                        end
-                        // hit
-                        else if (hit_pulse && split_complete) begin
-                            if (!newcard_pulse) begin
-                                trigger_newcard <= 1;
-                            end else begin
-                                trigger_newcard <= 0;  // Deassert after one pulse
-                                bj_game_state <= SPLIT1_HIT_PHASE;
+                        end else if (split1_hand1 != 1 && split1_hand2 != 0) begin
+                            else if (hit_pulse && split_complete) begin
+                                if (!newcard_pulse) begin
+                                    trigger_newcard <= 1;
+                                end else begin
+                                    trigger_newcard <= 0;  // Deassert after one pulse
+                                    bj_game_state <= SPLIT1_HIT_PHASE;
+                                end
                             end
-                        end
-                        else if (double_pulse && split_complete) begin
-                            if (!newcard_pulse) begin
-                                trigger_newcard <= 1;
-                            end else begin
-                                trigger_newcard <= 0;  // Deassert after one pulse
-                                bj_game_state <= SPLIT1_DOUBLE_PHASE;
+                            else if (double_pulse && split_complete) begin
+                                if (!newcard_pulse) begin
+                                    trigger_newcard <= 1;
+                                end else begin
+                                    trigger_newcard <= 0;  // Deassert after one pulse
+                                    bj_game_state <= SPLIT1_DOUBLE_PHASE;
+                                end
                             end
-                        end
-                        else if (stand_pulse && split_complete) begin
-                            if (next_pulse) begin
+                            else if (stand_pulse && split_complete) begin
                                 ace_num_p <= 0;
                                 trigger_newcard <= 1;
                                 bj_game_state <= SPLIT2_PHASE;
                             end
-                        end
-                        else if (next_pulse) begin
-                            ace_num_p <= 0;
-                            trigger_newcard <= 1;
-                            bj_game_state <= SPLIT2_PHASE;
+                            else if (next_pulse) begin
+                                ace_num_p <= 0;
+                                trigger_newcard <= 1;
+                                bj_game_state <= SPLIT2_PHASE;
+                            end
+                        end else begin          // Ace + something
+                            if (stand_pulse && split_complete) begin
+                                ace_num_p <= 0;
+                                trigger_newcard <= 1;
+                                bj_game_state <= SPLIT2_PHASE;
+                            end
                         end
                     end 
                 end 
@@ -712,30 +716,36 @@ module blackjack(
                             end
                             bj_game_state <= SPLIT2_PHASE;
                         end
-                        else if (hit_pulse && split_complete) begin
-                            if (!newcard_pulse) begin
-                                trigger_newcard <= 1;
-                            end else begin
-                                trigger_newcard <= 0; 
-                                bj_game_state <= SPLIT2_HIT_PHASE;
+                        else if (split2_hand1 != 1 && split2_hand2 != 0) begin
+                            if (hit_pulse && split_complete) begin
+                                if (!newcard_pulse) begin
+                                    trigger_newcard <= 1;
+                                end else begin
+                                    trigger_newcard <= 0; 
+                                    bj_game_state <= SPLIT2_HIT_PHASE;
+                                end
                             end
-                        end
-                        else if (double_pulse && split_complete) begin
-                            if (!newcard_pulse) begin
-                                trigger_newcard <= 1;
-                            end else begin
-                                trigger_newcard <= 0;  // Deassert after one pulse
-                                bj_game_state <= SPLIT2_DOUBLE_PHASE;
+                            else if (double_pulse && split_complete) begin
+                                if (!newcard_pulse) begin
+                                    trigger_newcard <= 1;
+                                end else begin
+                                    trigger_newcard <= 0;  // Deassert after one pulse
+                                    bj_game_state <= SPLIT2_DOUBLE_PHASE;
+                                end
+                                // if (next_pulse) begin
+                                //     bj_game_state <= DEALER_CARD_PHASE;
+                                // end
                             end
-                            // if (next_pulse) begin
-                            //     bj_game_state <= DEALER_CARD_PHASE;
-                            // end
-                        end
-                        else if (stand_pulse && dealer_score >= 17) begin
-                            bj_game_state <= RESULT_PHASE;
-                        end
-                        else begin
-                            bj_game_state <= SPLIT2_PHASE;
+                            else if (stand_pulse && dealer_score >= 17) begin
+                                bj_game_state <= RESULT_PHASE;
+                            end
+                            else begin
+                                bj_game_state <= SPLIT2_PHASE;
+                            end
+                        end else begin
+                            if (stand_pulse && split_complete) begin
+                                bj_game_state <= RESULT_PHASE;
+                            end
                         end
                     end  
                 end 
