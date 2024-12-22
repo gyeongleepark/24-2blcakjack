@@ -160,6 +160,10 @@ module tb;
         #20 next = 1;
         #20 next = 0;
 
+        // Press next button (Player card pahse -> Dealer score phase)
+        #20 next = 1;
+        #20 next = 0;
+
         ///////////////////////////////////////////////////////////
         // Test case 3: Blackjack case
             // Player's first two cards are 10, 11     

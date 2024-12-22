@@ -256,14 +256,15 @@ module blackjack(
                             else if (hit && !split_complete) begin
                                 if (!newcard_pulse) begin
                                     trigger_newcard <= 1;
-                                    player_new_card_reg <= card1;
-                                    player_hand[player_card_count] <= card1;
+                                    // player_new_card_reg <= card1;
+                                    // player_hand[player_card_count] <= card1;
                                 end else begin
                                     trigger_newcard <= 0;  // Deassert after one pulse
                                     // $display("player_score before: %d", player_score);
                                     player_score <= calculate_score_with_ace(player_hand[1], player_hand[2], player_hand[3], player_hand[4], player_card_count);
                                     // $display("player_score after: %d", player_score);
-                                    player_card_count <= player_card_count + 1;
+                                    player_card_count <= player_card_count + 1; 
+                                    // add next
                                 end
                                 bj_game_state <= PLAYER_CARD_PHASE;
                             end 
@@ -315,6 +316,13 @@ module blackjack(
                                     dealer_score <= card1 + card2 + 10;
                                 end else begin
                                     dealer_score <= card1 + card2;
+                                end
+                            end
+                            if (next) begin
+                                if (dealer_score >= 21) begin
+                                    bj_game_state <= RESULT_PHASE;
+                                end else begin
+                                    bj_game_state <= PLAYER_CARD_PHASE;
                                 end
                             end
                             // turn off trigger
