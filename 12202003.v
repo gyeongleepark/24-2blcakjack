@@ -445,7 +445,7 @@ module blackjack(
                     end  
                 end 
                 RESULT_PHASE: begin
-                    if (split_complete) begin
+                    if (!split_complete) begin
                         // player result
                         if ((player_score < dealer_score && dealer_score <= 21) 
                             || player_score > 21) begin
