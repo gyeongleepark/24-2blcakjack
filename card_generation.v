@@ -77,7 +77,7 @@ module card_generation(
                                 // 4'b0001: if (on) begin card1 <= rand1[3:0]; card2 <= rand2[3:0]; rand1 <= rand1 >> 1; rand2 <= rand2 >> 1; 
                                 // counter_simple <= counter_simple + 4'd1; end
                                 4'b0001: if (on) begin card1 <= 4'd4; card2 <= 4'd6; counter_simple <= counter_simple + 4'd1; end
-                                4'b0010: if (on) begin card1 <= 4'd4; card2 <= 4'd0; counter_simple <= 4'd0; end
+                                4'b0010: if (on) begin card1 <= 4'd4; card2 <= 4'd0; counter_simple <= counter_simple + 4'd1; end
                                 default: begin card1 <= 4'd0; card2 <= 4'd0; end
                             endcase
                         end
@@ -85,8 +85,8 @@ module card_generation(
                         begin
                             case (counter_double)
                                 4'b0000: if (on) begin card1 <= 4'd10; card2 <= 4'd8; counter_double <= counter_double + 4'd1; end
-                                4'b0001: if (on) begin card1 <= rand1[3:0]; card2 <= rand2[3:0]; rand1 <= rand1 >> 1; rand2 <= rand2 >> 1; 
-                                counter_double <= counter_double + 4'd1; end // successs!!!!
+                                4'b0001: if (on) begin card1 <= 4'd6; card2 <= 4'd8;
+                                counter_double <= counter_double + 4'd1; end
                                 4'b0010: if (on) begin card1 <= 4'd2; card2 <= 4'd0; counter_double <= 4'd0; end
                                 default: begin card1 <= 4'd0; card2 <= 4'd0; end
                             endcase
@@ -95,9 +95,9 @@ module card_generation(
                         begin
                             case (counter_blackjack)
                                 4'b0000: if (on) begin card1 <= 4'd10; card2 <= 4'd1; counter_blackjack <= counter_blackjack + 4'd1; end
-                                // 4'b0001: if (on) begin card1 <= rand1[3:0]; card2 <= rand2[3:0]; rand1 <= rand1 >> 1; rand2 <= rand2 >> 1; 
-                                // counter_blackjack <= counter_blackjack + 4'd1; end
-                                4'b0001: if (on) begin card1 <= 4'd0; card2 <= 4'd0; counter_blackjack <= 4'd0; end
+                                4'b0001: if (on) begin card1 <= 4'd8; card2 <= 4'd9;  
+                                counter_blackjack <= counter_blackjack + 4'd1; end
+                                4'b0010: if (on) begin card1 <= 4'd0; card2 <= 4'd0; counter_blackjack <= 4'd0; end
                                 default: begin card1 <= 4'd0; card2 <= 4'd0; end
                             endcase
                         end
@@ -105,10 +105,11 @@ module card_generation(
                         begin
                             case (counter_split)
                                 4'b0000: if (on) begin card1 <= 4'd10; card2 <= 4'd10; counter_split <= counter_split + 4'd1; end
-                                4'b0001: if (on) begin card1 <= 4'd8; card2 <= 4'd0; counter_split <= counter_split + 4'd1; end
-                                4'b0010: if (on) begin card1 <= 4'd4; card2 <= 4'd0; counter_split <= counter_split + 4'd1; end
-                                4'b0011: if (on) begin card1 <= 4'd8; card2 <= 4'd0; counter_split <= counter_split + 4'd1; end
-                                4'b0100: if (on) begin card1 <= 4'd2; card2 <= 4'd0; counter_split <= 4'd0; end
+                                4'b0001: if (on) begin card1 <= 4'd9; card2 <= 4'd8; counter_split <= counter_split + 4'd1; end
+                                4'b0010: if (on) begin card1 <= 4'd8; card2 <= 4'd0; counter_split <= counter_split + 4'd1; end
+                                4'b0011: if (on) begin card1 <= 4'd4; card2 <= 4'd0; counter_split <= counter_split + 4'd1; end
+                                4'b0100: if (on) begin card1 <= 4'd8; card2 <= 4'd0; counter_split <= counter_split + 4'd1; end
+                                4'b0101: if (on) begin card1 <= 4'd2; card2 <= 4'd0; counter_split <= 4'd0; end
                                 default: begin card1 <= 4'd0; card2 <= 4'd0; end
                             endcase
                         end

@@ -26,10 +26,10 @@ module tb;
     // Outputs from the top module
     wire [5:0] player_current_score, player_new_card;
     wire [5:0] player_current_score_split, player_new_card_split;
-    wire [5:0] dealer_current_score;
+    wire [5:0] dealer_current_score, dealer_new_card;
     wire [4:0] current_coin;
-    wire [5:0] player_hand[1:4];
-    wire [5:0] dealer_hand[1:4];
+    wire [5:0] player_hand1_out;
+    wire [5:0] player_hand2_out;
     wire can_split;
     wire Win;
     wire Lose;
@@ -50,12 +50,13 @@ module tb;
         .bet_1(bet_1),
         .player_current_score(player_current_score),
         .player_new_card(player_new_card),
+        .dealer_new_card(dealer_new_card),
         .player_current_score_split(player_current_score_split),
         .player_new_card_split(player_new_card_split),
         .dealer_current_score(dealer_current_score),
         .current_coin(current_coin),
-        // .player_hand(player_hand),
-        // .dealer_hand(dealer_hand),
+        .player_hand1_out(player_hand1),
+        .player_hand2_out(player_hand2),
         .can_split(can_split),
         .Win(Win),
         .Lose(Lose),
