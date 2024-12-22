@@ -16,6 +16,7 @@ module blackjack(
     output [5:0] player_current_score, 
     output [5:0] player_hand1,
     output [5:0] player_hand2,
+    // output [5:0] dealer_hand1,
     output [5:0] player_new_card,
     output [5:0] dealer_new_card,
     output [5:0] player_current_score_split, 
@@ -43,6 +44,8 @@ module blackjack(
     // hands
     reg [5:0] player_hand1 = 0;
     reg [5:0] player_hand2 = 0;
+    reg [5:0] dealer_hand1 = 0;
+    reg [5:0] dealer_hand2 = 0;
     reg [5:0] player_hand;
     reg [5:0] dealer_hand [1:4];
     reg [5:0] split1_hand [1:4];
@@ -50,7 +53,8 @@ module blackjack(
 
     integer split1_count;
     integer split2_count;
-    reg[3:0] ace_num;
+    reg[3:0] ace_num_p;
+    reg[3:0] ace_num_d;
 
     reg [1:0] hand_count;
     integer player_card_count, dealer_card_count, split_card_count;
@@ -167,15 +171,16 @@ module blackjack(
     //               FSM
     //-----------------------------------------
 
-    parameter [2:0] BETTING_PHASE = 3'b000,
-                    DEALER_CARD_PHASE = 3'b001,
-                    PLAYER_CARD_PHASE = 3'b010,
-                    RESULT_PHASE = 3'b011,
-                    SPLIT1_PHASE=3'b100, 
-                    SPLIT2_PHASE=3'b101,
-                    HIT_PHASE = 3'b110,
-                    DOUBLE_PHASE = 3'b111;
-    reg [2:0] bj_game_state;
+    parameter [3:0] BETTING_PHASE = 4'b0000,
+                    DEALER_CARD_PHASE = 4'b0001,
+                    PLAYER_CARD_PHASE = 4'b0010,
+                    RESULT_PHASE = 4'b0011,
+                    SPLIT1_PHASE= 4'b0100, 
+                    SPLIT2_PHASE= 4'b0101,
+                    HIT_PHASE = 4'b0110,
+                    DOUBLE_PHASE = 4'b0111,
+                    DEALER_SCORE_PHASE = 4'b1000;
+    reg [3:0] bj_game_state;
     reg [2:0] card_get_counter;
     reg [1:0] double_complete;
     reg [1:0] score_calculated;
@@ -204,7 +209,8 @@ module blackjack(
             first_turn <= 1;
             blackjack_win <= 0;
             trigger_newcard <= 0;
-            ace_num <= 0;
+            ace_num_p <= 0;
+            ace_num_d <= 0;
             split1_count <= 2;
             split2_count <= 2;
             card_get_counter <= 0;
@@ -229,14 +235,14 @@ module blackjack(
                             if (player_hand1 != player_hand2) begin
                                 if (player_hand1 == 4'd1 || player_hand2 == 4'd1) begin
                                     player_score <= player_hand1 + player_hand2 + 10;
-                                    ace_num <= 4'd1;
+                                    ace_num_p <= 4'd1;
                                 end else begin
                                     player_score <= player_hand1 + player_hand2;
                                 end
                             end else begin
                                 if (player_hand1 == 4'd1) begin
                                     player_score <= player_hand1 + player_hand2 + 10;
-                                    ace_num <= 4'd2;
+                                    ace_num_p <= 4'd2;
                                 end 
                                 // else : split case. no need to think
                             end
@@ -320,14 +326,14 @@ module blackjack(
                 HIT_PHASE: begin
                     player_new_card_reg <= card1;
                     if (!next && !score_calculated) begin
-                        player_new_card_reg <= card1;
+//                        player_new_card_reg <= card1;
                         // Calculate score
                         // if there was ace in intial two hands
-                        if (ace_num > 0) begin
+                        if (ace_num_p > 0) begin
                             if (player_score + card1 > 21) begin
                                 if (card1 == 4'd1) begin
                                     player_score <= player_score + card1;
-                                    ace_num <= ace_num + 1;
+                                    ace_num_p <= ace_num_p + 1;
                                 end else begin
                                     player_score <= player_score - 10 + card1;
                                 end
@@ -337,6 +343,7 @@ module blackjack(
                         end else begin
                             // if there was no ace in the initial two hands
                             if (card1 == 4'd1) begin
+                                ace_num_p <= ace_num_p + 1;
                                 if (player_score + 11 > 21 && player_score + card1 < 21) begin
                                     player_score <= player_score + card1;
                                 end else if (player_score + 11 > 21 && player_score + card1 > 21) begin
@@ -348,26 +355,33 @@ module blackjack(
                                 player_score <= player_score + card1;
                             end
                         end
-                        // Set flag indicating score has been calculated
                         score_calculated <= 1'b1;
                     end else if (next) begin
-                        // Reset flag and prepare for next signal
                         score_calculated <= 1'b0;
-                        // Update state based on score
+                        // player bust
                         if (player_score > 21) begin
                             bj_game_state <= RESULT_PHASE;
                         end else begin
                             bj_game_state <= DEALER_CARD_PHASE;
                         end
+                    end else if (hit) begin
+                        score_calculated <= 1'b0;
+                        if (!newcard_pulse) begin
+                            trigger_newcard <= 1;
+                        end else begin
+                            trigger_newcard <= 0;
+                        end
+                        bj_game_state <= PLAYER_CARD_PHASE;
+                    end else if (stand) begin
+                        score_calculated <= 1'b0;
+                        bj_game_state <= PLAYER_CARD_PHASE;
                     end
                 end
                 DEALER_CARD_PHASE: begin
                     if (first_turn) begin
                         if (trigger_newcard) begin
-                            dealer_hand[1] <= card1;
-                            dealer_hand[2] <= card2;
-                            dealer_hand[3] <= 0;
-                            dealer_hand[4] <= 0;
+                            dealer_hand1 <= card1;
+                            dealer_hand2 <= card2;
                             dealer_new_card_reg <= card1;
                             // dealer original score
                             if (card1 + card2 + 10 > 21) begin
@@ -393,37 +407,59 @@ module blackjack(
                         end
                     end
                     else begin
-                        if (!stand) begin
-                            if (next) begin
-                                if (dealer_score >= 21) begin
-                                    bj_game_state <= RESULT_PHASE;
-                                end else begin
-                                    bj_game_state <= PLAYER_CARD_PHASE;
-                                end
-                            end
-                        end else if (stand || double_complete) begin
-                            // after player stands
-                            if (dealer_score < 17) begin
-                                if (!newcard_pulse) begin
-                                    trigger_newcard <= 1;
-                                    dealer_new_card_reg <= card1;
-                                    dealer_hand[dealer_card_count] <= card1;
-                                end else begin
-                                    trigger_newcard <= 0;
-                                    dealer_card_count <= dealer_card_count + 1;
-                                    dealer_score <= calculate_score_with_ace(dealer_hand[1], dealer_hand[2], dealer_hand[3], dealer_hand[4], dealer_card_count);
-                                end
+                        // after player stands
+                        if (dealer_score < 17) begin
+                            score_calculated <= 1'b0;
+                            if (!newcard_pulse) begin
+                                trigger_newcard <= 1;
                             end else begin
+                                trigger_newcard <= 0;
+                                bj_game_state <= DEALER_SCORE_PHASE;
+                            end
+                        end else begin
+                            if (next) begin
                                 bj_game_state <= RESULT_PHASE;
                             end
                         end
-                        bj_game_state <= DEALER_CARD_PHASE;
                     end
-                    // else begin
-                    //     bj_game_state <= RESULT_PHASE;
-                    // end
                 end
-
+                DEALER_SCORE_PHASE: begin
+                    dealer_new_card_reg <= card1;
+                    if (dealer_score < 17) begin
+                        // Calculate score
+                        // if there was ace in intial two hands
+                        if (!score_calculated) begin
+                            if (ace_num_d > 0) begin
+                                if (dealer_score + card1 > 21) begin
+                                    if (card1 == 4'd1) begin
+                                        dealer_score <= dealer_score + card1;
+                                        ace_num_d <= ace_num_d + 1;
+                                    end else begin
+                                        dealer_score <= dealer_score - 10 + card1;
+                                    end
+                                end else begin
+                                    dealer_score <= dealer_score + card1;
+                                end
+                            end else begin
+                                // if there was no ace in the initial two hands
+                                if (card1 == 4'd1) begin
+                                    ace_num_d <= ace_num_d + 1;
+                                    if (dealer_score + 11 > 21 && dealer_score + card1 < 21) begin
+                                        dealer_score <= dealer_score + card1;
+                                    end else if (dealer_score + 11 > 21 && dealer_score + card1 > 21) begin
+                                        dealer_score <= dealer_score + card1;
+                                    end else if (dealer_score + 11 < 21) begin
+                                        dealer_score <= dealer_score + 10 + card1;
+                                    end
+                                end else begin
+                                    dealer_score <= dealer_score + card1;
+                                end
+                            end
+                            score_calculated <= 1'b1;
+                            bj_game_state <= DEALER_CARD_PHASE;
+                        end
+                    end
+                end
                 SPLIT1_PHASE: begin
                     if (split1_score > 21) begin
                         if (next) begin

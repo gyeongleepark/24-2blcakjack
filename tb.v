@@ -107,6 +107,14 @@ module tb;
         #40 hit = 1;           
         #20 hit = 0;
             // New card is 4
+//        #40 hit = 1;
+//        #20 hit = 0;
+        
+//        #40 hit = 1;
+//        #20 hit = 0;    
+            
+//        #40 stand = 1;
+//        #20 stand = 0;
             // Player's bust: go directly to result phase
         #40 next = 1;           
         #20 next = 0;
