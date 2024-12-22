@@ -56,48 +56,165 @@ module segment_display(
                Dd = 4'b1011, // "d"
                DA = 4'b1100, // "A"
                DN = 4'b1101; // None 
+
+    wire [5:0] player_current_score, player_new_card, player_current_score_split, player_new_card_split, dealer_current_score;
+    wire [4:0] current_coin;
+    reg [5:0] player_hand1, player_hand2;
+    wire can_split, Win, Lose, Draw;
+
+
+    reg bet_in;
+    reg dealer_reveal_in, player_state_in, dealer_state_in;
   
                
     ///////////////////////////////////////////////////////////////////////////////////////////
     // TODO: Instantiate your top module top.v here so that it works correctly
-    // top uut (
-    // 
-    // );
+    top uut (
+        .clk(clk),
+        .reset(reset),
+        .next(next),
+        .hit(hit),
+        .stand(stand),
+        .double(double),
+        .split(split),
+        .bet_8(bet_8),
+        .bet_4(bet_4),
+        .bet_2(bet_2),
+        .bet_1(bet_1),
+        .player_current_score(player_current_score),
+        .player_new_card(player_new_card),
+        .player_current_score_split(player_current_score_split),
+        .player_new_card_split(player_new_card_split),
+        .dealer_current_score(dealer_current_score),
+        .current_coin(current_coin),
+        .player_hand1_out(player_hand1),
+        .player_hand2_out(player_hand2),
+        .can_split(can_split),
+        .Win(Win),
+        .Lose(Lose),
+        .Draw(Draw)
+    );
+    
+    assign LED_split_Var = can_split;
+    assign LED_Win_Var = Win;
+    assign LED_Lose_Var = Lose;
+    assign LED_Draw_Var = Draw;
 
     // Activate LEDs (TODO)
     always @(posedge(clk)) begin
         if (split) LED_split_Var = 1;
         else LED_split_Var = 0;
+
+        if (Win) LED_Win_Var = 1;
+        else LED_Win_Var = 0;
+
+        if (Lose) LED_Lose_Var = 1;
+        else LED_Lose_Var = 0;
     end
 
     // Declare the digits for display (TODO)
     always @(posedge(clk)) begin
         if (reset) begin
-            onesDigit = DN;
-            twosDigit = DN;
-            threesDigit = DN;
-            foursDigit = DN;
-            total_bet = bet_8*8 + bet_4*4 + bet_2*2 + bet_1*1;
-        end
-        else if (next) begin
-            onesDigit = total_bet % 10;
-            twosDigit = total_bet / 10;
+            onesDigit = D0;
+            twosDigit = D3;
             threesDigit = DN;
             foursDigit = Db;
+            total_bet = bet_8*8 + bet_4*4 + bet_2*2 + bet_1*1;
+
+            //my signals
+            bet_in <= 0;
+            dealer_reveal_in <= 0;
+            player_state_in <= 0;
+            dealer_state_in <= 0;
         end
-        else if (stand) begin
-            onesDigit = D0;
-            twosDigit = D1;
-            threesDigit = DN;
-            foursDigit = Dd;
-        end
-        else if (hit) begin
-            onesDigit = D7;
-            twosDigit = DN;
-            threesDigit = D0;
-            foursDigit = D1;
+        // else if (next) begin
+        //     onesDigit = total_bet % 10;
+        //     twosDigit = total_bet / 10;
+        //     threesDigit = DN;
+        //     foursDigit = Db;
+        // end
+
+        // else if (stand) begin
+        //     onesDigit = D0;
+        //     twosDigit = D1;
+        //     threesDigit = DN;
+        //     foursDigit = Dd;
+        // end
+        // else if (hit) begin
+        //     onesDigit = D7;
+        //     twosDigit = DN;
+        //     threesDigit = D0;
+        //     foursDigit = D1;
+        // end
+        
+        // betting phase
+        else begin
+            // betting phase
+            if (total_bet > 0 && next) begin
+                bet_in <= 1;
+            end
+            // start the game if bet is set
+            if (bet_in) begin
+                dealer_reveal_in <= 1;
+                if (bet_in && dealer_reveal_in) begin
+                    bet_in <= 0;
+                    onesDigit = dealer_hand[1] % 10;
+                    twosDigit = delaer_hand[1] / 10;
+                    threesDigit = DN;
+                    foursDigit = Dd;
+                end
+            end else begin
+                if (dealer_reveal_in && foursDigit == Dd) begin
+                    if (next) begin
+                        dealer_reveal_in <= 0;
+                        // if not result phase, go to the player phase
+                        if (!Win && !Lose && !Draw) begin
+                            player_state_in <= 1;
+                            onesDigit = player_hand[2] % 10;
+                            twosDigit = player_hand[2] / 10;
+                            threesDigit = player_hand[1] % 10;
+                            foursDigit = player_hand[1] / 10;
+                    end
+                end
+                else if (player_state_in) begin
+                    if (hit) begin
+                        // hand msb detect logic needed!
+                        onesDigit = player_hand[3] % 10;
+                        twosDigit = player_hand[3] / 10;
+                        threesDigit = player_current_score % 10;
+                        foursDigit = player_current_score / 10;
+                        // if not bust, go to dealer_state
+                        if (next) begin
+                            player_state_in <= 0;
+                            dealer_state_in <= 1;
+                        end
+                    end
+                    else if (double) begin
+                        onesDigit = player_hand[3] % 10;
+                        twosDigit = player_hand[3] / 10;
+                        threesDigit = player_current_score % 10;
+                        foursDigit = player_current_score / 10;
+                        // if not bust, go to dealer_state
+                        if (next) begin
+                            player_state_in <= 0;
+                            dealer_state_in <= 1;
+                            onesDigit = dealer_current_score % 10;
+                            twosDigit = dealer_current_score / 10;
+                            threesDigit = DN;
+                            foursDigit = Dd;
+                        end
+                    end
+                end
+                else if (dealer_state_in) begin
+                    onesDigit = dealer_current_score % 10;
+                    twosDigit = dealer_current_score / 10;
+                    threesDigit = DN;
+                    foursDigit = Dd;
+                end
+            end
         end
     end    
+    end
     ///////////////////////////////////////////////////////////////////////////////////////////
     
     
@@ -176,4 +293,3 @@ module segment_display(
     assign LED_Draw = LED_Draw_Var;
     
  endmodule
-

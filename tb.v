@@ -48,10 +48,12 @@ module tb;
         .bet_4(bet_4),
         .bet_2(bet_2),
         .bet_1(bet_1),
-        .player_hand1(player_hand1),
-        .player_hand2(player_hand2),
+        // .player_hand1_out(player_hand1),
+        // .player_hand2_ou(player_hand2),
         .player_current_score(player_current_score),
         .player_new_card(player_new_card),
+        .player_hand1_out(player_hand1),
+        .player_hand2_out(player_hand2),
         .dealer_new_card(dealer_new_card),
         .player_current_score_split(player_current_score_split),
         .player_new_card_split(player_new_card_split),
@@ -162,18 +164,6 @@ module tb;
             bet_4 = 1;
             bet_2 = 1;
             bet_1 = 1;
-
-	    // Press next button (Betting phase -> Dealer card phase)
-        #20 next = 1;
-        #20 next = 0;
-        
-        // Press next button (Dealer card phase -> Player card phase)
-        #20 next = 1;
-        #20 next = 0;
-
-        // Press next button (Player card pahse -> Dealer score phase)
-        #20 next = 1;
-        #20 next = 0;
 
         ///////////////////////////////////////////////////////////
         // Test case 3: Blackjack case
