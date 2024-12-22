@@ -25,6 +25,7 @@ module tb;
     
     // Outputs from the top module
     wire [5:0] player_current_score, player_new_card;
+    wire [5:0] player_hand1, player_hand2;
     wire [5:0] dealer_new_card;
     wire [5:0] player_current_score_split, player_new_card_split;
     wire [5:0] dealer_current_score;
@@ -47,6 +48,8 @@ module tb;
         .bet_4(bet_4),
         .bet_2(bet_2),
         .bet_1(bet_1),
+        .player_hand1(player_hand1),
+        .player_hand2(player_hand2),
         .player_current_score(player_current_score),
         .player_new_card(player_new_card),
         .dealer_new_card(dealer_new_card),
