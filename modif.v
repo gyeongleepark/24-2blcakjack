@@ -666,7 +666,7 @@ module blackjack(
                             end
                             bj_game_state <= SPLIT1_PHASE;
                         end else if (split1_hand1 != 1 && split1_hand2 != 0) begin
-                            else if (hit_pulse && split_complete) begin
+                            if (hit_pulse && split_complete) begin
                                 if (!newcard_pulse) begin
                                     trigger_newcard <= 1;
                                 end else begin
