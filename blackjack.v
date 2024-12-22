@@ -583,7 +583,7 @@ module blackjack(
                             if (trigger_newcard) begin
                                 trigger_newcard <= 0;
                             end else begin
-                                split1_hand2 <= card1;
+                                split2_hand2 <= card1;
                                 //split1 initial score
                                 if (split2_hand1 + card1 + 10 > 21) begin
                                     split2_score <= split2_hand1 + card1;
@@ -628,7 +628,7 @@ module blackjack(
                             bj_game_state <= RESULT_PHASE;
                         end
                         else begin
-                            bj_game_state <= DEALER_CARD_PHASE;
+                            bj_game_state <= SPLIT2_PHASE;
                         end
                     end  
                 end 
