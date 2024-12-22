@@ -170,6 +170,7 @@ module blackjack(
                     SPLIT2_PHASE=3'b101;
     reg [2:0] bj_game_state;
     reg [2:0] card_get_counter;
+    reg [1:0] double_complete;
 
     always @(posedge clk) begin
         if (reset) begin
@@ -198,6 +199,7 @@ module blackjack(
             split1_count <= 2;
             split2_count <= 2;
             card_get_counter <= 0;
+            double_complete <= 0;
         end else begin
             case (bj_game_state)
                 BETTING_PHASE: begin
@@ -276,6 +278,7 @@ module blackjack(
                                     player_score <= calculate_score_with_ace(player_hand[1], player_hand[2], player_hand[3], player_hand[4], player_card_count);
                                     // $display("player_score after: %d", player_score);
                                     player_card_count <= player_card_count + 1;
+                                    double_complete <= 1;
                                 end
                                 bj_game_state <= DEALER_CARD_PHASE;
                             end
@@ -304,37 +307,52 @@ module blackjack(
                             dealer_hand[3] <= 0;
                             dealer_hand[4] <= 0;
                             dealer_new_card_reg <= card1;
+                            // dealer original score
+                            if (card1 + card2 + 10 > 21) begin
+                                dealer_score <= card1 + card2;
+                            end else begin
+                                if (card1 == 4'd1 || card2 == 4'd1) begin
+                                    dealer_score <= card1 + card2 + 10;
+                                end else begin
+                                    dealer_score <= card1 + card2;
+                                end
+                            end
+                            // turn off trigger
                             trigger_newcard <= 0;
+                        end else begin
+                            first_turn <= 1'b0;
                         end
-                        first_turn <= 1'b0;
                     end
-                    // it doesnt change with the next signal...
-                    // after player stands
                     else begin
-                        if (next) begin
-                            dealer_score <= calculate_score_with_ace(dealer_hand[1], dealer_hand[2], dealer_hand[3], dealer_hand[4], dealer_card_count);
-                            if (dealer_score >= 21) begin
-                                bj_game_state <= RESULT_PHASE;
+                        if (!stand) begin
+                            if (next) begin
+                                if (dealer_score >= 21) begin
+                                    bj_game_state <= RESULT_PHASE;
+                                end else begin
+                                    bj_game_state <= PLAYER_CARD_PHASE;
+                                end
+                            end
+                        end else if (stand || double_complete) begin
+                            // after player stands
+                            if (dealer_score < 17) begin
+                                if (!newcard_pulse) begin
+                                    trigger_newcard <= 1;
+                                    dealer_new_card_reg <= card1;
+                                    dealer_hand[dealer_card_count] <= card1;
+                                end else begin
+                                    trigger_newcard <= 0;
+                                    dealer_card_count <= dealer_card_count + 1;
+                                    dealer_score <= calculate_score_with_ace(dealer_hand[1], dealer_hand[2], dealer_hand[3], dealer_hand[4], dealer_card_count);
+                                end
                             end else begin
-                                bj_game_state <= PLAYER_CARD_PHASE;
+                                bj_game_state <= RESULT_PHASE;
                             end
                         end
-                        else if (dealer_score < 17) begin
-                            if (!newcard_pulse) begin
-                                trigger_newcard <= 1;
-                                dealer_new_card_reg <= card1;
-                                dealer_hand[dealer_card_count] <= card1;
-                            end else begin
-                                trigger_newcard <= 0;
-                                dealer_card_count <= dealer_card_count + 1;
-                                dealer_score <= calculate_score_with_ace(dealer_hand[1], dealer_hand[2], dealer_hand[3], dealer_hand[4], dealer_card_count);
-                            end
                         bj_game_state <= DEALER_CARD_PHASE;
                     end
                     // else begin
                     //     bj_game_state <= RESULT_PHASE;
                     // end
-                end
                 end
 
                 SPLIT1_PHASE: begin
