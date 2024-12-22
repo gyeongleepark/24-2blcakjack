@@ -1,3 +1,4 @@
+`timescale 1ns / 1ps
 module blackjack(
     // Inputs
     input clk,    
@@ -38,16 +39,7 @@ module blackjack(
     reg lose_reg;
     reg draw_reg;
     reg split_reg;
-    reg win_reg_1;
-    reg lose_reg_1;
-    reg draw_reg_1;
-    reg win_reg_2;
-    reg lose_reg_2;
-    reg draw_reg_2;
-
-    reg double_1;
-    reg double_2;
-
+    
     reg hit_before;
     reg hit_after = 1'b0;
     reg hit_pulse;
@@ -74,13 +66,15 @@ module blackjack(
 
     // card generation instance
     wire [3:0] card1, card2;
+    reg [1:0] sum;
+    
     // hands
     reg [5:0] player_hand1 = 0;
     reg [5:0] player_hand2 = 0;
     reg [5:0] dealer_hand1 = 0;
     reg [5:0] dealer_hand2 = 0;
     reg [5:0] player_hand;
-    reg [5:0] dealer_hand [1:4];
+    // reg [5:0] dealer_hand [1:4];
     reg [5:0] split1_hand1 = 0;
     reg [5:0] split1_hand2 = 0;
     reg [5:0] split2_hand1 = 0;
@@ -103,7 +97,6 @@ module blackjack(
     reg split_active;    // if split done raise 1
     reg split_complete;  // split complete
     reg first_turn;
-    reg burst1;
 
     reg blackjack_win;
     reg [1:0] new_game = 1'd0;
@@ -117,61 +110,13 @@ module blackjack(
     reg [1:0] split1_active;
     reg [1:0] split2_active;
 
-    // card pulse
-    wire newcard_pulse;
-    reg newcard_ff, newcard_ff2;
-    reg trigger_newcard;
-
-
-    // function [7:0] calculate_score_with_ace;
-    //     input [5:0] card1, card2, card3, card4;
-    //     input integer card_count;   // current number of cards
-
-    //     integer i;                // loop index
-    //     reg [7:0] score;
-    //     reg [3:0] ace_count;      
-    //     reg [5:0] cards [1:4];                 
-
-    //     begin
-    //         score = 0;
-    //         ace_count = 0;
-
-    //         // initialize cards
-    //         cards[1] = card1;
-    //         cards[2] = card2;
-    //         cards[3] = card3;
-    //         cards[4] = card4;
-
-    //         for (i = 1; i <= card_count; i = i + 1) begin
-    //             if (cards[i] == 6'd1) begin
-    //                 ace_count = ace_count + 1;
-    //             end
-    //             score = score + cards[i]; // sum of the cards
-    //         end
-
-    //         if (ace_count > 0) begin
-    //             // if busts, calculate A as 1
-    //             if ((score + 10) <= 21) begin
-    //                 score = score + 10;
-    //                 ace_count = ace_count - 1;
-    //             end
-
-    //             // rest of the A are all 1
-    //             score = score + ace_count;
-    //         end
-    //         calculate_score_with_ace = score;
-    //     end
-    // endfunction    
-
-    // Card generation instance
-    card_generation u_card (
+    deck u_deck(
         .clk(clk),
         .reset(reset),
-        .on(newcard_pulse),
-        .test(test_signal),
-        .card1_out(card1),
-        .card2_out(card2)
-    );
+        .num(sum),
+        .card1(card1),
+        .card2(card2)
+    );  
 
     debouncer db_rst(reset, clk, rst_reg);
     debouncer db_next(next, clk, nxt_reg);
@@ -179,36 +124,6 @@ module blackjack(
     debouncer db_stand(stand, clk, stand_reg);
     debouncer db_double(double, clk, double_reg);
 
-    //-----------------------------------------
-    //       Test signal
-    //-----------------------------------------    
-    always @(posedge reset) begin
-        if (test_signal >= 3'b101) begin
-            test_signal <= 3'b000; // Wrap around after 5
-        end else begin
-            test_signal <= test_signal + 1; // Increment
-        end
-    end
-
-
-    //-----------------------------------------
-    //       Card generation pulse
-    //-----------------------------------------
-    assign newcard_pulse = !newcard_ff2 && trigger_newcard;
-
-    always @(posedge clk) begin
-        if (rst_pulse) begin
-            newcard_ff <= 1'b0;
-            newcard_ff2 <= 1'b0;
-        end else begin
-            // Update flip-flops for pulse generation
-            if (newcard_pulse) begin
-                trigger_newcard <= 0;  // Turn off trigger
-            end
-            newcard_ff <= trigger_newcard;
-            newcard_ff2 <= newcard_ff;
-        end
-    end
 
     //-----------------------------------------
     //       Button input pulse
@@ -309,7 +224,7 @@ module blackjack(
     reg [2:0] card_get_counter;
     reg [1:0] score_calculated, split_lose, split_win, split_draw;
 
-    always @(posedge clk, negedge next) begin
+    always @(posedge clk) begin
         if (rst_pulse) begin
             bj_game_state <= BETTING_PHASE;
             player_score <= 0;
@@ -327,23 +242,12 @@ module blackjack(
             win_reg <= 0;
             lose_reg <= 0;
             draw_reg <= 0;
-            
-            split_reg <= 0;
-            win_reg_1 <= 0;
-            lose_reg_1 <= 0;
-            draw_reg_1 <= 0;
-            win_reg_2 <= 0;
-            lose_reg_2 <= 0;
-            draw_reg_2 <= 0;
-            double_1 <= 0;
-            double_2 <= 0;
-            
             split_active <= 1;
             split_complete <= 0;
             split_able <= 0;
             first_turn <= 1;
             blackjack_win <= 0;
-            trigger_newcard <= 0;
+//            trigger_newcard <= 0;
             ace_num_p <= 0;
             ace_num_d <= 0;
             split1_count <= 2;
@@ -352,44 +256,37 @@ module blackjack(
             score_calculated <= 0;
             split1_active <= 0;
             split2_active <= 0;
-            burst1 <= 0;
+            sum <= 0;
         end else begin
             case (bj_game_state)
                 BETTING_PHASE: begin
                     // hand over two cards to the player
-                    if (!newcard_pulse) begin
-                        trigger_newcard <= 1;
-                        player_hand1 <= card1;
-                        player_hand2 <= card2;
+                    sum <= 2'b10;
+                    player_hand1 <= card1;
+                    player_hand2 <= card2;
+                    if((player_hand1 != 0) && (player_hand2 != 0) && (player_hand1 == player_hand2)) begin
+                        split_able <= 1'b1;
+                    end
+                    if (player_hand1 + player_hand2 + 10 > 21) begin
+                        player_score <= player_hand1 + player_hand2;
                     end else begin
-                        trigger_newcard <= 0;  // Deassert after one pulse
-                        if((player_hand1 != 0) && (player_hand2 != 0) && (player_hand1 == player_hand2)) begin
-                            split_able <= 1'b1;
-                        end
-                        if (player_hand1 + player_hand2 + 10 > 21) begin
-                            player_score <= player_hand1 + player_hand2;
-                        end else begin
-                            if (player_hand1 != player_hand2) begin
-                                if (player_hand1 == 4'd1 || player_hand2 == 4'd1) begin
-                                    player_score <= player_hand1 + player_hand2 + 10;
-                                    ace_num_p <= 4'd1;
-                                end else begin
-                                    player_score <= player_hand1 + player_hand2;
-                                end
+                        if (player_hand1 != player_hand2) begin
+                            if (player_hand1 == 4'd1 || player_hand2 == 4'd1) begin
+                                player_score <= player_hand1 + player_hand2 + 10;
+                                ace_num_p <= 4'd1;
                             end else begin
-                                if (player_hand1 == 4'd1) begin
-                                    player_score <= player_hand1 + player_hand2 + 10;
-                                    ace_num_p <= 4'd2;
-                                end 
-                                // else : split case. no need to think
+                                player_score <= player_hand1 + player_hand2;
                             end
+                        end else begin
+                            if (player_hand1 == 4'd1) begin
+                                player_score <= player_hand1 + player_hand2 + 10;
+                                ace_num_p <= 4'd2;
+                            end 
+                            // else : split case. no need to think
                         end
                     end
                     // move on to dealer phase
                     if (bet_amount > 0 && next_pulse) begin
-                        player_card_count <= 3; // initialize to 3 so that we won't caculate in the index
-                        split_card_count <= 2;
-                        trigger_newcard <= 1;
                         bj_game_state <= DEALER_CARD_PHASE;
                     end
                 end
@@ -401,50 +298,27 @@ module blackjack(
                     else begin
                         if (!stand_pulse) begin
                             if (split_able && split_pulse && split_active) begin
-                                if (bet_amount > (initial_coin / 2)) begin
-                                    // 아무것도 안 하는 상태 ...
-                                    $stop;
-                                end else begin
-                                    hand_count <= 2;
-                                    trigger_newcard <= 1;
-                                    // initialize split1_hand 
-                                    split1_hand1 <= player_hand1;
-                                    split1_hand2 <= 0;
-                                    // initialize split2_hand
-                                    split2_hand1 <= player_hand2;
-                                    split2_hand2 <= 0;
-                                    // calcualte split score
-                                    split1_score <= player_hand1;
-                                    split2_score <= player_hand2;
-                                    // you cannot split more, split is completed
-                                    split_active <= 0;
-                                    split_complete <= 1;
-                                    // move on to split1 phase
-                                    split1_active <= 1;
-                                    bj_game_state <= SPLIT1_PHASE;
-                                end
+                                // initialize split1_hand 
+                                split1_hand1 <= player_hand1;
+                                split1_hand2 <= 0;
+                                // initialize split2_hand
+                                split2_hand1 <= player_hand2;
+                                split2_hand2 <= 0;
+                                // calcualte split score
+                                split1_score <= player_hand1;
+                                split2_score <= player_hand2;
+                                // you cannot split more, split is completed
+                                split_active <= 0;
+                                split_complete <= 1;
+                                // move on to split1 phase
+                                split1_active <= 1;
+                                bj_game_state <= SPLIT1_PHASE;
                             end 
                             else if (hit_pulse && !split_complete) begin
-                                if (!newcard_pulse) begin
-                                    trigger_newcard <= 1;
-                                end else begin
-                                    trigger_newcard <= 0;  // Deassert after one pulse
-                                    bj_game_state <= HIT_PHASE;
-                                end
+                                bj_game_state <= HIT_PHASE;
                             end 
                             else if (double_pulse && !split_complete) begin
-                                if (bet_amount > (initial_coin / 2)) begin
-                                    // 아무것도 안 하는 상태 ...
-                                    $stop;
-                                end else begin
-                                    if (!newcard_pulse) begin
-                                        trigger_newcard <= 1;
-                                    end else begin
-                                        trigger_newcard <= 0;  // Deassert after one pulse
-                                        // $display("player_score before: %d", player_score);
-                                        bj_game_state <= DOUBLE_PHASE;
-                                    end
-                                end
+                                bj_game_state <= DOUBLE_PHASE;
                             end
                             else if (stand_pulse && !split_complete) begin
                                 if (dealer_score >= 17) begin
@@ -468,6 +342,7 @@ module blackjack(
                     end
                 end
                 HIT_PHASE: begin
+                    sum <= 2'b01;
                     player_new_card_reg <= card1;
                     // player hit
                     if (!next_pulse && !score_calculated) begin
@@ -500,6 +375,7 @@ module blackjack(
                             end
                         end
                         score_calculated <= 1'b1;
+//                        newcard_pulse <= 0;
                     end else if (next_pulse) begin
                         score_calculated <= 1'b0;
                         // player bust
@@ -510,11 +386,6 @@ module blackjack(
                         end
                     end else if (hit_pulse) begin
                         score_calculated <= 1'b0;
-                        if (!newcard_pulse) begin
-                            trigger_newcard <= 1;
-                        end else begin
-                            trigger_newcard <= 0;
-                        end
                         bj_game_state <= PLAYER_CARD_PHASE;
                     end else if (stand_pulse) begin
                         score_calculated <= 1'b0;
@@ -522,6 +393,7 @@ module blackjack(
                     end
                 end
                 DOUBLE_PHASE: begin
+                    sum <= 2'b01;
                     player_new_card_reg <= card1;
                     // calc score
                     if (!next_pulse && !score_calculated) begin
@@ -555,6 +427,7 @@ module blackjack(
                         end
                         score_calculated <= 1'b1;
                         bj_game_state <= DOUBLE_PHASE;
+//                        newcard_pulse <= 0;
                     end else if (next_pulse) begin
                     // stand. go to the dealer phase
                         score_calculated <= 1'b0;
@@ -563,43 +436,41 @@ module blackjack(
                 end
                 DEALER_CARD_PHASE: begin
                     if (first_turn) begin
-                        if (trigger_newcard) begin
-                            dealer_hand1 <= card1;
-                            dealer_hand2 <= card2;
-                            dealer_new_card_reg <= card1;
-                            // dealer original score
-                            if (card1 + card2 + 10 > 21) begin
-                                dealer_score <= card1 + card2;
-                            end else begin
-                                if (card1 == 4'd1 || card2 == 4'd1) begin
-                                    dealer_score <= card1 + card2 + 10;
-                                end else begin
-                                    dealer_score <= card1 + card2;
-                                end
-                            end
-                            if (next_pulse) begin
-                                if (dealer_score >= 21 || player_score >= 21) begin
-                                    bj_game_state <= RESULT_PHASE;
-                                end else begin
-                                    bj_game_state <= PLAYER_CARD_PHASE;
-                                end
-                            end
-                            // turn off trigger
-                            trigger_newcard <= 0;
+                        // if (trigger_newcard) begin
+                            // newcard_pulse <= 1;
+                        sum <= 2'b10;
+                        dealer_hand1 <= card1;
+                        dealer_hand2 <= card2;
+                        dealer_new_card_reg <= card1;
+                        // dealer original score
+                        if (card1 + card2 + 10 > 21) begin
+                            dealer_score <= card1 + card2;
                         end else begin
-                            first_turn <= 1'b0;
+                            if (card1 == 4'd1 || card2 == 4'd1) begin
+                                dealer_score <= card1 + card2 + 10;
+                            end else begin
+                                dealer_score <= card1 + card2;
+                            end
                         end
+                        if (next_pulse) begin
+//                            newcard_pulse <= 0;
+                            if (dealer_score >= 21 || player_score >= 21) begin
+                                bj_game_state <= RESULT_PHASE;
+                            end else begin
+                                bj_game_state <= PLAYER_CARD_PHASE;
+                            end
+                        end
+                        // turn off trigger
+                        // trigger_newcard <= 0;
+                    // end else begin
+                        first_turn <= 1'b0;
+                    // end
                     end
                     else begin
                         // after player stands
                         if (dealer_score < 17) begin
                             score_calculated <= 1'b0;
-                            if (!newcard_pulse) begin
-                                trigger_newcard <= 1;
-                            end else begin
-                                trigger_newcard <= 0;
-                                bj_game_state <= DEALER_SCORE_PHASE;
-                            end
+                            bj_game_state <= DEALER_SCORE_PHASE;
                         end else begin
                             if (next_pulse) begin
                                 bj_game_state <= RESULT_PHASE;
@@ -608,8 +479,9 @@ module blackjack(
                     end
                 end
                 DEALER_SCORE_PHASE: begin
-                    dealer_new_card_reg <= card1;
                     if (dealer_score < 17) begin
+                        sum <= 2'd01;
+//                        dealer_new_card_reg <= card1;
                         // Calculate score
                         // if there was ace in intial two hands
                         if (!score_calculated) begin
@@ -641,6 +513,7 @@ module blackjack(
                             end
                             score_calculated <= 1'b1;
                             bj_game_state <= DEALER_CARD_PHASE;
+                            // newcard_pulse <= 0;
                         end
                     end
                 end
@@ -648,17 +521,13 @@ module blackjack(
                     if (split1_score > 21) begin
                         if (next_pulse) begin
                             ace_num_p <= 0;
-                            trigger_newcard <= 1;
-                            burst1 <= 1;
                             bj_game_state <= SPLIT2_PHASE;
                         end
                     end
                     else begin
                         // initialize split1_hand with two cards
                         if (split1_hand2 == 0) begin
-                            if (trigger_newcard) begin
-                                trigger_newcard <= 0;
-                            end else begin
+                                sum <= 2'd01;
                                 split1_hand2 <= card1;
                                 //split1 initial score
                                 if (split1_hand1 + card1 + 10 > 21) begin
@@ -678,67 +547,38 @@ module blackjack(
                                         end 
                                     end
                                 end
-                            end
+                            // end
                             bj_game_state <= SPLIT1_PHASE;
-                        end else if (split1_hand1 != 1 && split1_hand2 != 0) begin
-                            if (hit_pulse && split_complete) begin
-                                if (!newcard_pulse) begin
-                                    trigger_newcard <= 1;
-                                end else begin
-                                    trigger_newcard <= 0;  // Deassert after one pulse
-                                    bj_game_state <= SPLIT1_HIT_PHASE;
-                                end
-                            end
-                            else if (double_pulse && split_complete) begin
-                                if (bet_amount > (initial_coin / 3)) begin
-                                    // 아무것도 안하기 ...
-                                    $stop;
-                                end else begin
-                                    if (!newcard_pulse) begin
-                                        trigger_newcard <= 1;
-                                    end else begin
-                                        trigger_newcard <= 0;  // Deassert after one pulse
-                                        bj_game_state <= SPLIT1_DOUBLE_PHASE;
-                                    end
-                                    double_1 <= 1;
-                                end
-                            end
-                            else if (stand_pulse && split_complete) begin
+                        end
+                        // hit
+                        else if (hit_pulse && split_complete) begin
+                                bj_game_state <= SPLIT1_HIT_PHASE;
+                        end
+                        else if (double_pulse && split_complete) begin
+                                bj_game_state <= SPLIT1_DOUBLE_PHASE;
+                        end
+                        else if (stand_pulse && split_complete) begin
+                            if (next_pulse) begin
                                 ace_num_p <= 0;
-                                trigger_newcard <= 1;
                                 bj_game_state <= SPLIT2_PHASE;
                             end
-                            else if (next_pulse) begin
-                                ace_num_p <= 0;
-                                trigger_newcard <= 1;
-                                bj_game_state <= SPLIT2_PHASE;
-                            end
-                        end else begin          // Ace + something
-                            if (stand_pulse && split_complete) begin
-                                ace_num_p <= 0;
-                                trigger_newcard <= 1;
-                                bj_game_state <= SPLIT2_PHASE;
-                            end
+                        end
+                        else if (next_pulse) begin
+                            ace_num_p <= 0;
+                            bj_game_state <= SPLIT2_PHASE;
                         end
                     end 
                 end 
                 SPLIT2_PHASE: begin
-                    if (split2_score > 21) begin                   // 여기 수정
+                    if (split2_score >= 21) begin
                         if (next_pulse) begin
-                            if(burst1) begin
-                            bj_game_state <= RESULT_PHASE;
-                            end
-                            else begin
-                                bj_game_state <= DEALER_CARD_PHASE;
-                            end
+                            bj_game_state <= DEALER_CARD_PHASE;
                         end
                     end   
                     else begin
                         // initialize split2_hand with two cards
                         if (split2_hand2 == 0) begin
-                            if (trigger_newcard) begin
-                                trigger_newcard <= 0;
-                            end else begin
+                                sum <= 2'd01;
                                 split2_hand2 <= card1;
                                 //split1 initial score
                                 if (split2_hand1 + card1 + 10 > 21) begin
@@ -758,68 +598,39 @@ module blackjack(
                                         end 
                                     end
                                 end
-                            end
+                            // end
                             bj_game_state <= SPLIT2_PHASE;
                         end
-                        else if (split2_hand1 != 1 && split2_hand2 != 0) begin
-                            if (hit_pulse && split_complete) begin
-                                if (!newcard_pulse) begin
-                                    trigger_newcard <= 1;
-                                end else begin
-                                    trigger_newcard <= 0; 
-                                    bj_game_state <= SPLIT2_HIT_PHASE;
-                                end
-                            end
-                            else if (double_pulse && split_complete) begin
-                                if (double_1) begin
-                                    if (bet_amount > (initial_coin / 4)) begin
-                                        // 아무것도 안하기 ...
-                                        $stop;
-                                    end else begin
-                                        if (!newcard_pulse) begin
-                                            trigger_newcard <= 1;
-                                        end else begin
-                                            trigger_newcard <= 0;  // Deassert after one pulse
-                                            bj_game_state <= SPLIT2_DOUBLE_PHASE;
-                                        end
-                                        // if (next_pulse) begin
-                                        //     bj_game_state <= DEALER_CARD_PHASE;
-                                        // end
-                                        double_2 <= 1;
-                                    end
-                                end else begin
-                                    if (bet_amount > (initial_coin / 3)) begin
-                                        // 아무것도 안하기 ...
-                                        $stop;
-                                    end else begin
-                                        if (!newcard_pulse) begin
-                                            trigger_newcard <= 1;
-                                        end else begin
-                                            trigger_newcard <= 0;  // Deassert after one pulse
-                                            bj_game_state <= SPLIT2_DOUBLE_PHASE;
-                                        end
-                                        // if (next_pulse) begin
-                                        //     bj_game_state <= DEALER_CARD_PHASE;
-                                        // end
-                                        double_2 <= 1;
-                                    end
-                                end
-                            end
-                            else if (stand_pulse && dealer_score >= 17) begin
-                                bj_game_state <= RESULT_PHASE;
-                            end
-                            else begin
-                                bj_game_state <= SPLIT2_PHASE;
-                            end
-                        end else begin
-                            if (stand_pulse && split_complete) begin
-                                bj_game_state <= RESULT_PHASE;
-                            end
+                        else if (hit_pulse && split_complete) begin
+                            // if (!newcard_pulse) begin
+                                // trigger_newcard <= 1;
+                            // end else begin
+                                // trigger_newcard <= 0; 
+                                bj_game_state <= SPLIT2_HIT_PHASE;
+                            // end
+                        end
+                        else if (double_pulse && split_complete) begin
+                            // if (!newcard_pulse) begin
+                                // trigger_newcard <= 1;
+                            // end else begin
+                                // trigger_newcard <= 0;  // Deassert after one pulse
+                                bj_game_state <= SPLIT2_DOUBLE_PHASE;
+                            // end
+                            // if (next_pulse) begin
+                            //     bj_game_state <= DEALER_CARD_PHASE;
+                            // end
+                        end
+                        else if (stand_pulse && dealer_score >= 17) begin
+                            bj_game_state <= RESULT_PHASE;
+                        end
+                        else begin
+                            bj_game_state <= SPLIT2_PHASE;
                         end
                     end  
                 end 
                 SPLIT1_HIT_PHASE: begin
                     if (!next_pulse && !score_calculated) begin
+                        sum <= 2'd01;
                         player_new_card_split_reg <= card1;
                         // Calculate score
                         // if there was ace in intial two hands
@@ -855,7 +666,7 @@ module blackjack(
                         // player bust
                         // if (split1_score > 21) begin
                         ace_num_p <= 0;
-                        trigger_newcard <= 1;
+                        // trigger_newcard <= 1;
                         bj_game_state <= SPLIT2_PHASE;
                         split1_active <= 0;
                         // end else begin
@@ -863,12 +674,12 @@ module blackjack(
                         // end
                     end else if (hit_pulse) begin
                         score_calculated <= 1'b0;
-                        if (!newcard_pulse) begin
-                            trigger_newcard <= 1;
-                        end else begin
-                            trigger_newcard <= 0;
+                        // if (!newcard_pulse) begin
+                            // trigger_newcard <= 1;
+                        // end else begin
+                            // trigger_newcard <= 0;
                             // bj_game_state <= SPLIT1_PHASE;
-                        end
+                        // end
                         bj_game_state <= SPLIT1_PHASE;
                     end else if (stand_pulse) begin
                         score_calculated <= 1'b0;
@@ -878,6 +689,7 @@ module blackjack(
                     end
                 end
                 SPLIT1_DOUBLE_PHASE: begin
+                    sum <= 2'd01;
                     player_new_card_split_reg <= card1;
                     // calc score
                     if (!next_pulse && !score_calculated) begin
@@ -920,6 +732,7 @@ module blackjack(
                     end
                 end
                 SPLIT2_HIT_PHASE: begin
+                    sum <= 2'd01;
                     player_new_card_split_reg <= card1;
                     if (!next_pulse && !score_calculated) begin
                         // Calculate score
@@ -958,12 +771,12 @@ module blackjack(
                         bj_game_state <= DEALER_CARD_PHASE;
                     end else if (hit_pulse) begin
                         score_calculated <= 1'b0;
-                        if (!newcard_pulse) begin
-                            trigger_newcard <= 1;
-                        end else begin
-                            trigger_newcard <= 0;
+                        // if (!newcard_pulse) begin
+                            // trigger_newcard <= 1;
+                        // end else begin
+                            // trigger_newcard <= 0;
                             // bj_game_state <= SPLIT2_PHASE;
-                        end
+                        // end
                         bj_game_state <= SPLIT2_PHASE;
                     end else if (stand_pulse) begin
                         score_calculated <= 1'b0;
@@ -973,6 +786,7 @@ module blackjack(
                     end
                 end
                 SPLIT2_DOUBLE_PHASE: begin
+                    sum <= 2'd01;
                     player_new_card_split_reg <= card1;
                     // calc score
                     if (!next_pulse && !score_calculated) begin
@@ -1015,59 +829,34 @@ module blackjack(
                 end
                 RESULT_PHASE: begin
                     if (split2_active) begin
-                        // split1 result
-                        if ((split1_score < dealer_score && dealer_score <= 21) 
-                            || split1_score > 21) begin
-                            win_reg_1 <= 1'b0;
-                            lose_reg_1 <= 1'b1;
-                            draw_reg_1 <= 1'b0;
-                            lose_reg <= 1'b1;
-                            $display("split hand1 lose");
-                        end 
-                        else if ((split1_score > dealer_score && split1_score <= 21) 
-                            || dealer_score > 21) begin
-                            if (split1_score == 21) begin
-                                blackjack_win <= 1'b1;
-                            end
-                            win_reg_1 <= 1'b1;
-                            lose_reg_1 <= 1'b0;
-                            draw_reg_1 <= 1'b0;
-                            win_reg <= 1'b1;
-                            $display("split hand1 win!");
-                        end 
-                        else begin
-                            win_reg_1 <= 1'b0;
-                            lose_reg_1 <= 1'b0;
-                            draw_reg_1 <= 1'b1;
-                            draw_reg <= 1'b1;
-                            $display("split hand1 draw");
+                        // condition check
+                        if (((split1_score < dealer_score && dealer_score <= 21) || split1_score > 21) || 
+                        (split2_score > 21 || (split2_score < dealer_score && dealer_score <= 21))) begin
+                            split_lose <= 1'b1;
+                            split_win <= 1'b0;
+                            split_draw <= 1'b0;
                         end
-                        // split2 result
-                        if ((split2_score < dealer_score && dealer_score <= 21) 
-                            || split2_score > 21) begin
-                            win_reg_2 <= 1'b0;
-                            lose_reg_2 <= 1'b1;
-                            draw_reg_2 <= 1'b0;
-                            lose_reg <= 1'b1;
-                            $display("split hand2 lose");
-                        end 
-                        else if ((split2_score > dealer_score && split2_score <= 21) 
-                            || dealer_score > 21) begin
-                            if (split2_score == 21) begin
-                                blackjack_win <= 1'b1;
-                            end
-                            win_reg_2 <= 1'b1;
-                            lose_reg_2 <= 1'b0;
-                            draw_reg_2 <= 1'b0;
-                            win_reg <= 1'b1;
-                            $display("split hand2 win!");
-                        end 
+                        else if (((split1_score > dealer_score && split1_score <= 21) || dealer_score > 21) || 
+                        (dealer_score < 21 || (split2_score > dealer_score && split2_score <= 21))) begin
+                            split_win <= 1'b1;
+                            split_lose <= 1'b0;
+                            split_draw <= 1'b0;
+                        end
                         else begin
-                            win_reg_2 <= 1'b0;
-                            lose_reg_2 <= 1'b0;
-                            draw_reg_2 <= 1'b1;
+                            split_win <= 1'b0;
+                            split_lose <= 1'b0;
+                            split_draw <= 1'b1;
+                        end
+                        // assert leg
+                        if (split_lose) begin
+                            lose_reg <= 1'b1;
+                            $display("split lose");
+                        end else if (split_win) begin
+                            win_reg <= 1'b1;
+                            $display("split win");
+                        end else begin
                             draw_reg <= 1'b1;
-                            $display("split hand2 draw");
+                            $display("split draw");
                         end
 
                         if (next_pulse) begin
@@ -1086,7 +875,7 @@ module blackjack(
                             new_game <= 1;
                         end
                     end else begin
-                        // player result
+                        // normal situations
                         if ((player_score < dealer_score && dealer_score <= 21) 
                             || player_score > 21) begin
                             win_reg  <= 1'b0;
@@ -1110,7 +899,6 @@ module blackjack(
                             draw_reg <= 1'b1;
                             $display("draw");
                         end
-                    
                         split_active <= 0;
                         if (next_pulse) begin
                             bj_game_state <= BETTING_PHASE;
@@ -1162,54 +950,23 @@ module blackjack(
                 current_coin_reg <= current_coin_reg - bet_amount;
             end
 
-            if (!split2_active && double_pulse) begin       // 확인. split(x) doulbe(o) 일 때
+            if (double_pulse) begin
                 current_coin_reg <= current_coin_reg - bet_amount;
                 bet_amount <= bet_amount * 2;
             end
 
             if (bj_game_state == RESULT_PHASE) begin
-                if (!split_complete) begin
-                    if (win_reg) begin
-                        if (blackjack_win) begin
-                            current_coin_reg <= current_coin_reg + 4 * bet_amount;
-                            blackjack_win <= 1'b0;
-                        end else begin
-                            current_coin_reg <= current_coin_reg + 2 * bet_amount; 
-                        end
-                    end else if (lose_reg) begin
-                        current_coin_reg <= current_coin_reg;
-                    end else if (draw_reg) begin
-                        current_coin_reg <= current_coin_reg + bet_amount;
+                if (win_reg) begin
+                    if (blackjack_win) begin
+                        current_coin_reg <= current_coin_reg + 4 * bet_amount;
+                        blackjack_win <= 1'b0;
+                    end else begin
+                        current_coin_reg <= current_coin_reg + 2 * bet_amount; 
                     end
-                end
-                else begin
-                    if (win_reg_1 && win_reg_2) begin
-                        if (double_1 && double_2) begin
-                            current_coin_reg <= current_coin_reg + (-1 + 3 + 3) * bet_amount;
-                        end else if ((double_1 && !double_2) || (!double_1 && double_2)) begin
-                            current_coin_reg <= current_coin_reg + (-1 + 3 + 2) * bet_amount;
-                        end else if (!double_1 && !double_2) begin
-                            current_coin_reg <= current_coin_reg + (-1 + 2 + 2) * bet_amount;
-                        end 
-                    end else if ((win_reg_1 && lose_reg_2) || (lose_reg_1 && win_reg_2)) begin
-                        if (win_reg_1 && double_1 || win_reg_2 && double_2) begin
-                            current_coin_reg <= current_coin_reg + (-1 + 3) * bet_amount;
-                        end else begin
-                            current_coin_reg <= current_coin_reg + (-1 + 2) * bet_amount;
-                        end
-                    end else if ((win_reg_1 && draw_reg_2) || (draw_reg_1 && win_reg_2)) begin
-                        if (win_reg_1 && double_1 || win_reg_2 && double_2) begin
-                            current_coin_reg <= current_coin_reg + (-1 + 3 + 1) * bet_amount;
-                        end else begin
-                            current_coin_reg <= current_coin_reg + (-1 + 2 + 1) * bet_amount;
-                        end
-                    end else if (lose_reg_1 && lose_reg_2) begin
-                        current_coin_reg <= current_coin_reg + (-1) * bet_amount;
-                    end else if ((lose_reg_1 && draw_reg_2) || (draw_reg_1 && lose_reg_2)) begin
-                        current_coin_reg <= current_coin_reg + (-1 + 1) * bet_amount;
-                    end else if (draw_reg_1 && draw_reg_2) begin
-                        current_coin_reg <= current_coin_reg + (-1 + 1 + 1) * bet_amount;
-                    end
+                end else if (lose_reg) begin
+                    current_coin_reg <= current_coin_reg;
+                end else if (draw_reg) begin
+                    current_coin_reg <= current_coin_reg + bet_amount;
                 end
             end
         end
