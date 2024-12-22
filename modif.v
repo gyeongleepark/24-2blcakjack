@@ -397,23 +397,27 @@ module blackjack(
                     else begin
                         if (!stand_pulse) begin
                             if (split_able && split_pulse && split_active) begin
-                                hand_count <= 2;
-                                trigger_newcard <= 1;
-                                // initialize split1_hand 
-                                split1_hand1 <= player_hand1;
-                                split1_hand2 <= 0;
-                                // initialize split2_hand
-                                split2_hand1 <= player_hand2;
-                                split2_hand2 <= 0;
-                                // calcualte split score
-                                split1_score <= player_hand1;
-                                split2_score <= player_hand2;
-                                // you cannot split more, split is completed
-                                split_active <= 0;
-                                split_complete <= 1;
-                                // move on to split1 phase
-                                split1_active <= 1;
-                                bj_game_state <= SPLIT1_PHASE;
+                                if (bet_amount > (initial_coin / 2)) begin
+                                    // 아무것도 안 하는 상태 ...
+                                end else begin
+                                    hand_count <= 2;
+                                    trigger_newcard <= 1;
+                                    // initialize split1_hand 
+                                    split1_hand1 <= player_hand1;
+                                    split1_hand2 <= 0;
+                                    // initialize split2_hand
+                                    split2_hand1 <= player_hand2;
+                                    split2_hand2 <= 0;
+                                    // calcualte split score
+                                    split1_score <= player_hand1;
+                                    split2_score <= player_hand2;
+                                    // you cannot split more, split is completed
+                                    split_active <= 0;
+                                    split_complete <= 1;
+                                    // move on to split1 phase
+                                    split1_active <= 1;
+                                    bj_game_state <= SPLIT1_PHASE;
+                                end
                             end 
                             else if (hit_pulse && !split_complete) begin
                                 if (!newcard_pulse) begin
@@ -424,12 +428,16 @@ module blackjack(
                                 end
                             end 
                             else if (double_pulse && !split_complete) begin
-                                if (!newcard_pulse) begin
-                                    trigger_newcard <= 1;
+                                if (bet_amount > (initial_coin / 2)) begin
+                                    // 아무것도 안 하는 상태 ...
                                 end else begin
-                                    trigger_newcard <= 0;  // Deassert after one pulse
-                                    // $display("player_score before: %d", player_score);
-                                    bj_game_state <= DOUBLE_PHASE;
+                                    if (!newcard_pulse) begin
+                                        trigger_newcard <= 1;
+                                    end else begin
+                                        trigger_newcard <= 0;  // Deassert after one pulse
+                                        // $display("player_score before: %d", player_score);
+                                        bj_game_state <= DOUBLE_PHASE;
+                                    end
                                 end
                             end
                             else if (stand_pulse && !split_complete) begin
@@ -675,13 +683,17 @@ module blackjack(
                                 end
                             end
                             else if (double_pulse && split_complete) begin
-                                if (!newcard_pulse) begin
-                                    trigger_newcard <= 1;
+                                if (bet_amount > (initial_coin / 3)) begin
+                                    // 아무것도 안하기 ...
                                 end else begin
-                                    trigger_newcard <= 0;  // Deassert after one pulse
-                                    bj_game_state <= SPLIT1_DOUBLE_PHASE;
+                                    if (!newcard_pulse) begin
+                                        trigger_newcard <= 1;
+                                    end else begin
+                                        trigger_newcard <= 0;  // Deassert after one pulse
+                                        bj_game_state <= SPLIT1_DOUBLE_PHASE;
+                                    end
+                                    1_double <= 1;
                                 end
-                                1_double <= 1;
                             end
                             else if (stand_pulse && split_complete) begin
                                 ace_num_p <= 0;
@@ -703,7 +715,7 @@ module blackjack(
                     end 
                 end 
                 SPLIT2_PHASE: begin
-                    if (split2_score >= 21) begin
+                    if (split2_score > 21) begin                   // 여기 수정
                         if (next_pulse) begin
                             bj_game_state <= DEALER_CARD_PHASE;
                         end
@@ -746,16 +758,37 @@ module blackjack(
                                 end
                             end
                             else if (double_pulse && split_complete) begin
-                                if (!newcard_pulse) begin
-                                    trigger_newcard <= 1;
+                                if (1_double) begin
+                                    if (bet_amount > (initial_coin / 4)) begin
+                                        // 아무것도 안하기 ...
+                                    end else begin
+                                        if (!newcard_pulse) begin
+                                            trigger_newcard <= 1;
+                                        end else begin
+                                            trigger_newcard <= 0;  // Deassert after one pulse
+                                            bj_game_state <= SPLIT2_DOUBLE_PHASE;
+                                        end
+                                        // if (next_pulse) begin
+                                        //     bj_game_state <= DEALER_CARD_PHASE;
+                                        // end
+                                        2_double <= 1;
+                                    end
                                 end else begin
-                                    trigger_newcard <= 0;  // Deassert after one pulse
-                                    bj_game_state <= SPLIT2_DOUBLE_PHASE;
+                                    if (bet_amount > (initial_coin / 3)) begin
+                                        // 아무것도 안하기 ...
+                                    end else begin
+                                        if (!newcard_pulse) begin
+                                            trigger_newcard <= 1;
+                                        end else begin
+                                            trigger_newcard <= 0;  // Deassert after one pulse
+                                            bj_game_state <= SPLIT2_DOUBLE_PHASE;
+                                        end
+                                        // if (next_pulse) begin
+                                        //     bj_game_state <= DEALER_CARD_PHASE;
+                                        // end
+                                        2_double <= 1;
+                                    end
                                 end
-                                2_double <= 1;
-                                // if (next_pulse) begin
-                                //     bj_game_state <= DEALER_CARD_PHASE;
-                                // end
                             end
                             else if (stand_pulse && dealer_score >= 17) begin
                                 bj_game_state <= RESULT_PHASE;
