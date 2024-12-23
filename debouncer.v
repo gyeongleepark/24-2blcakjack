@@ -1,61 +1,30 @@
-`timescale 1ns / 1ps
- 
-module debouncer(
-    input input_sig,
-    input clk,
+module debounce_better_version(
+    input input_sig,clk,
     output output_sig
     );
+    wire slow_clk_en;
+    wire Q1,Q2,Q2_bar,Q0;
+    clock_enable u1(clk,slow_clk_en);
+    my_dff_en d0(clk,slow_clk_en,input_sig,Q0);
 
-wire slow_clk;
-wire Q0, Q1, Q2, Q2_bar;
-reg out_reg;
-
-clock_div u1(clk,slow_clk);
-dff d0(slow_clk, input_sig, Q0);
-dff d1(slow_clk, Q0, Q1);
-dff d2(slow_clk, Q1, Q2);
-
-assign Q2_bar = ~Q2;
-
-assign output_sig = out_reg;
-always @(clk)
-begin
-    out_reg = Q1 & Q2;
-end
-
-assign output_sig = out_reg;
-
+    my_dff_en d1(clk,slow_clk_en,Q0,Q1);
+    my_dff_en d2(clk,slow_clk_en,Q1,Q2);
+    assign Q2_bar = ~Q2;
+    assign output_sig = Q1 & Q2_bar;
 endmodule
-
-// Slow clock
-module clock_div(
-    input clk,
-    output slow_clk
-    );
-
-    reg [26:0] counter = 0;
-    reg slow_clk_reg;
-    always @(posedge(clk))
+// Slow clock enable for debouncing button 
+module clock_enable(input Clk_100M,output slow_clk_en);
+    reg [26:0]counter=0;
+    always @(posedge Clk_100M)
     begin
-        counter <= (counter >= 350)?0:counter+1;
-        slow_clk_reg <= (counter < 175)?1'b0:1'b1;
+       counter <= (counter>=100)?0:counter+1;
     end
-    
-    assign slow_clk = slow_clk_reg;
+    assign slow_clk_en = (counter == 50)?1'b1:1'b0;
 endmodule
-
-// D Flip-Flop
-module dff(
-    input clk,
-    input d,
-    output q
-    );
-
-    reg q_reg;
-    always @(clk)
-    begin
-        q_reg <= d;
+// D-flip-flop with clock enable signal for debouncing module 
+module my_dff_en(input DFF_CLOCK, clock_enable,D, output reg Q=0);
+    always @ (posedge DFF_CLOCK) begin
+  if(clock_enable==1) 
+           Q <= D;
     end
-    
-    assign q = q_reg;
-endmodule
+endmodule 

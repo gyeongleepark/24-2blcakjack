@@ -66,17 +66,83 @@ module segment_display(
 
     reg bet_in;
     reg dealer_reveal_in, player_state_in, dealer_state_in;
+
+    //-----------------------------------------
+    //       Button input pulse
+    //-----------------------------------------
+     // Wires for debounced button signals
+    wire db_next, db_hit, db_stand, db_double, db_reset;
+
+    // Instantiate debouncers for each button
+    debouncer db_next_inst (
+        .input_sig(next),
+        .clk(clk),
+        .output_sig(db_next)
+    );
+
+    debouncer db_hit_inst (
+        .input_sig(hit),
+        .clk(clk),
+        .output_sig(db_hit)
+    );
+
+    debouncer db_stand_inst (
+        .input_sig(stand),
+        .clk(clk),
+        .output_sig(db_stand)
+    );
+
+    debouncer db_double_inst (
+        .input_sig(double),
+        .clk(clk),
+        .output_sig(db_double)
+    );
+
+    debouncer db_reset_inst (
+        .input_sig(reset),
+        .clk(clk),
+        .output_sig(db_reset)
+    );
+
+    // Pulse generation registers
+    reg db_next_d, db_hit_d, db_stand_d, db_double_d, db_reset_d;
+
+    always @(posedge clk or posedge reset) begin
+        if (reset) begin
+            // Reset all registers and pulses
+            db_next_d   <= 0; db_hit_d   <= 0;
+            db_stand_d  <= 0; db_double_d <= 0;
+            db_reset_d  <= 0;
+            nxt_pulse   <= 0; hit_pulse   <= 0;
+            stand_pulse <= 0; double_pulse <= 0;
+            rst_pulse <= 0;
+        end else begin
+            // Capture the previous state of debounced signals
+            db_next_d   <= db_next;
+            db_hit_d    <= db_hit;
+            db_stand_d  <= db_stand;
+            db_double_d <= db_double;
+            db_reset_d  <= db_reset;
+
+            // Generate pulses on rising edge of debounced signals
+            nxt_pulse   <= db_next && ~db_next_d;
+            hit_pulse   <= db_hit && ~db_hit_d;
+            stand_pulse <= db_stand && ~db_stand_d;
+            double_pulse <= db_double && ~db_double_d;
+            rst_pulse <= db_reset && ~db_reset_d;
+        end
+    end
   
                
     ///////////////////////////////////////////////////////////////////////////////////////////
     // TODO: Instantiate your top module top.v here so that it works correctly
     top uut (
         .clk(clk),
-        .reset(reset),
-        .next(next),
-        .hit(hit),
-        .stand(stand),
-        .double(double),
+        .reset(rst_pulse),
+        .next(next_pulse),
+        .hit(hit_pulse),
+        .stand(stand_pulse),
+        .double(double_pulse),
         .split(split),
         .bet_8(bet_8),
         .bet_4(bet_4),
@@ -112,14 +178,15 @@ module segment_display(
         else LED_Draw_Var = 0;
     end
 
+    reg bet_fin;
     // Declare the digits for display (TODO)
     always @(posedge(clk)) begin
-        if (reset) begin
+        if (rst_pulse) begin
             onesDigit = D0;
             twosDigit = D3;
             threesDigit = DN;
             foursDigit = Db;
-            total_bet = bet_8*8 + bet_4*4 + bet_2*2 + bet_1*1;
+            bet_fin <= 0;
 
             //my signals
             bet_in <= 0;
@@ -127,30 +194,16 @@ module segment_display(
             player_state_in <= 0;
             dealer_state_in <= 0;
         end
-        // else if (next) begin
-        //     onesDigit = total_bet % 10;
-        //     twosDigit = total_bet / 10;
-        //     threesDigit = DN;
-        //     foursDigit = Db;
-        // end
-
-        // else if (stand) begin
-        //     onesDigit = D0;
-        //     twosDigit = D1;
-        //     threesDigit = DN;
-        //     foursDigit = Dd;
-        // end
-        // else if (hit) begin
-        //     onesDigit = D7;
-        //     twosDigit = DN;
-        //     threesDigit = D0;
-        //     foursDigit = D1;
-        // end
-        
         // betting phase
         else begin
             // betting phase
-            if (total_bet > 0 && next) begin
+            if (!bet_fin) begin
+                total_bet <= (bet_8<<3) | (bet_4<<2) | (bet_2<<2) | (bet_1<<1);
+                if (total_bet > 0) begin
+                    bet_fin <= 1;
+                end
+            end
+            else if (total_bet > 0 && next_pulse) begin
                 bet_in <= 1;
             end
             // start the game if bet is set
@@ -165,7 +218,7 @@ module segment_display(
                 end
             end else begin
                 if (dealer_reveal_in && foursDigit == Dd) begin
-                    if (next) begin
+                    if (next_pulse) begin
                         dealer_reveal_in <= 0;
                         // if not result phase, go to the player phase
                         if (!Win && !Lose && !Draw) begin
@@ -177,25 +230,25 @@ module segment_display(
                     end
                 end
                 else if (player_state_in) begin
-                    if (hit) begin
+                    if (hit_pulse) begin
                         // hand msb detect logic needed!
                         onesDigit = player_new_card % 10;
                         twosDigit = player_new_card / 10;
                         threesDigit = player_current_score % 10;
                         foursDigit = player_current_score / 10;
                         // if not bust, go to dealer_state
-                        if (next) begin
+                        if (next_pulse) begin
                             player_state_in <= 0;
                             dealer_state_in <= 1;
                         end
                     end
-                    else if (double) begin
+                    else if (double_pulse) begin
                         onesDigit = player_new_card % 10;
                         twosDigit = player_new_card / 10;
                         threesDigit = player_current_score % 10;
                         foursDigit = player_current_score / 10;
                         // if not bust, go to dealer_state
-                        if (next) begin
+                        if (next_pulse) begin
                             player_state_in <= 0;
                             dealer_state_in <= 1;
                             onesDigit = dealer_current_score % 10;
